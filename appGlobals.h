@@ -60,7 +60,7 @@
 #define INCLUDE_FTP_HFS false // ftp.cpp (file upload)
 #define INCLUDE_TGRAM false   // telegram.cpp (Telegram app interface)
 #define INCLUDE_AUDIO false   // audio.cpp (microphones & speakers)
-#define INCLUDE_PERIPH false  // peripherals.cpp (servos, PIR, led etc)
+#define INCLUDE_PERIPH true  // peripherals.cpp (servos, PIR, led etc)
 #define INCLUDE_SMTP false    // smtp.cpp (email)
 #define INCLUDE_MQTT false    // mqtt.cpp (MQTT)
 #define INCLUDE_HASIO false   // mqtt.cpp (Send home assistant discovery messages). Needs INCLUDE_MQTT true
@@ -264,6 +264,7 @@ float* getMPU9250();
 mjpegStruct getNextFrame(bool firstCall = false);
 int getInputPeripheral(uint8_t cmd);
 bool getPIRval();
+bool getAccVal();
 bool haveWavFile(bool isTL = false);
 bool identifyBMx();
 void intercom();
@@ -398,6 +399,7 @@ extern int uartRxdPin;
 
 // peripherals used
 extern bool pirUse; // true to use PIR or radar sensor (RCWL-0516) for motion detection
+extern bool accUse; // true to use accelerometer (ADXL345) for motion detection
 extern bool lampAuto; // if true in conjunction with usePir, switch on lamp when PIR activated
 extern bool lampNight;
 extern int lampType;
@@ -416,6 +418,14 @@ extern int wakePin; // if wakeUse is true
 extern int lightsPin;
 extern bool teleUse;
 extern int srtInterval;
+
+
+// accelerometer (ADXL345) pins
+extern int  accCS;
+extern int  accSDD;
+extern int  accSDA;
+extern int  accSCL;
+// extern char accINT[];
 
 // Pan / Tilt Servos 
 extern int servoPanPin; 

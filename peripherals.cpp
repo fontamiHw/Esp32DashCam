@@ -29,9 +29,10 @@
 
 // peripherals used
 bool pirUse; // true to use PIR for motion detection
+bool accUse; // true to use accelerometer for motion detection
 bool ledBarUse; // true to use led bar
 uint8_t lampLevel; // brightness of on board lamp led 
-bool lampAuto = false; // if true in conjunction with pirUse, switch on lamp when PIR activated at night
+bool lampAuto = false; // if true in conjunction with pirUse and accUse, switch on lamp when PIR or accelerometer activated at night
 bool lampNight; // if true, lamp comes on at night (not used)
 int lampType; // how lamp is used
 bool voltUse; // true to report on ADC pin eg for for battery
@@ -48,6 +49,14 @@ bool RCactive = false;
 int pirPin; // if pirUse is true
 int lampPin;
 int buzzerPin; // if buzzerUse is true
+
+// accelerometer (ADXL345) pins
+#define MAX_INT_SELECTION_STR 10
+int  accCS;
+int  accSDD;
+int  accSDA;
+int  accSCL;
+// char accINT[MAX_INT_SELECTION_STR]="";
 
 // Camera servos 
 int servoPanPin;
@@ -113,6 +122,12 @@ void setLamp(uint8_t lampVal);
 bool getPIRval() {
   // get PIR or radar sensor status 
   return digitalRead(pirPin); 
+}
+
+bool getAccVal() {
+  // get accelerometer status
+  // MIK da studiare come ritornare che si e' attivi
+  return digitalRead(accCS);
 }
 
 void buzzerAlert(bool buzzerOn) {
@@ -420,6 +435,18 @@ static void prepPIR() {
     else {
       pirUse = false;
       LOG_WRN("No PIR pin defined");
+    }
+  }
+  if (relayPin) pinMode(relayPin, OUTPUT);
+}
+
+static void prepAcc() {
+  if (accUse) {
+    LOG_INF("Preparing accelerometer SPI Bus");
+    if (accCS) pinMode(accCS, INPUT_PULLDOWN); // pulled high for active
+    else {
+      accUse = false;
+      LOG_WRN("No accelerometer pin defined");
     }
   }
   if (relayPin) pinMode(relayPin, OUTPUT);

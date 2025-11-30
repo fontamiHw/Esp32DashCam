@@ -91,6 +91,9 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   // peripherals
 #if INCLUDE_PERIPH
   else if (!strcmp(variable, "pirUse")) pirUse = (bool)intVal;
+  else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
+  // else if (!strcmp(variable, "accINT")) snprintf(accINT, sizeof(accINT), "%s", value);
+
   else if (!strcmp(variable, "lampLevel")) {
     lampLevel = intVal;
     if (!lampType) setLamp(lampLevel); // manual
@@ -810,6 +813,13 @@ void appSpecificTelegramTask(void* p) {
   vTaskDelete(NULL);
 }
 
+/*
+accSDD~~3~N~Pin used for SDD on Accellerometer
+accSDA~~3~N~Pin used for SDA on Accellerometer
+accSCL~~3~N~Pin used for SCL on Accellerometer
+accINT~0~3~S:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
+*/
+
 /************** default app configuration **************/
 const char* appConfig = R"~(
 ST_SSID~~99~~na
@@ -919,6 +929,8 @@ lampType~0~3~S:Manual:PIR~How lamp activated
 SVactive~0~3~C~Enable servo use
 pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
+accUse~0~3~C~Use Accellerometer (ADXL345) for start Video
+accCS~~3~N~Pin used for CS on Accellerometer
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor
