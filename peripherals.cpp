@@ -1,3 +1,4 @@
+#include "esp32-hal-gpio.h"
 
 // Optional peripherals, to support:
 // - pin sensors eg PIR / radar
@@ -54,9 +55,7 @@ int buzzerPin; // if buzzerUse is true
 
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
-int  accCS;
-int  accSDO;
-int  accSDOPin;
+int accCS;
 int accINT;
 
 // Camera servos 
@@ -445,9 +444,8 @@ static void prepPIR() {
 static void prepAcc() {
   LOG_INF("Preparing accelerometer");
   if (accUse) {
-    LOG_INF("accelerometer In use on address %s ", getSelectionOption("accSDO", accSDO));
     LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
-    // pinMode(accCS, INPUT_PULLDOWN); 
+    //pinMode(accCS, INPUT_PULLDOWN); 
   } else {
     LOG_INF("accelerometer Not in use");
   }

@@ -422,8 +422,6 @@ extern int srtInterval;
 
 // accelerometer (ADXL345) pins
 extern int  accCS;
-extern int  accSDO;
-extern int  accSDOPin;
 extern int  accINT;
 
 
