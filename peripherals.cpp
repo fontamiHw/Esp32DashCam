@@ -447,7 +447,7 @@ static void prepAcc() {
   if (accUse) {
     LOG_INF("accelerometer In use on address %s ", getSelectionOption("accSDO", accSDO));
     LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
-    pinMode(accCS, INPUT_PULLDOWN); 
+    // pinMode(accCS, INPUT_PULLDOWN); 
   } else {
     LOG_INF("accelerometer Not in use");
   }
