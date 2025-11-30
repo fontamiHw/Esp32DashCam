@@ -32,6 +32,7 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
 #endif
   int intVal = atoi(value);
   float fltVal = atof(value);
+  LOG_VRB("Check in updateAppStatus: %s=%s fromUser=%d", variable, value, fromUser);
   if (!strcmp(variable, "custom")) return true;
 #ifndef AUXILIARY
   else if (!strcmp(variable, "stopStream")) stopSustainTask(intVal);
@@ -92,6 +93,10 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
 #if INCLUDE_PERIPH
   else if (!strcmp(variable, "pirUse")) pirUse = (bool)intVal;
   else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
+  else if (!strcmp(variable, "accCS")) accCS = intVal;
+  else if (!strcmp(variable, "accSDD")) accSDD = intVal;
+  else if (!strcmp(variable, "accSDA")) accSDA = intVal;
+  else if (!strcmp(variable, "accSCL")) accSCL = intVal;
   // else if (!strcmp(variable, "accINT")) snprintf(accINT, sizeof(accINT), "%s", value);
 
   else if (!strcmp(variable, "lampLevel")) {
@@ -814,9 +819,6 @@ void appSpecificTelegramTask(void* p) {
 }
 
 /*
-accSDD~~3~N~Pin used for SDD on Accellerometer
-accSDA~~3~N~Pin used for SDA on Accellerometer
-accSCL~~3~N~Pin used for SCL on Accellerometer
 accINT~0~3~S:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
 */
 
@@ -931,6 +933,9 @@ pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
 accUse~0~3~C~Use Accellerometer (ADXL345) for start Video
 accCS~~3~N~Pin used for CS on Accellerometer
+accSDD~~3~N~Pin used for SDD on Accellerometer
+accSDA~~3~N~Pin used for SDA on Accellerometer
+accSCL~~3~N~Pin used for SCL on Accellerometer
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor

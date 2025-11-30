@@ -238,6 +238,7 @@ void updateStatus(const char* variable, const char* _value, bool fromUser) {
   bool res = true;
   char value[IN_FILE_NAME_LEN];
   strncpy(value, _value, sizeof(value));  
+  LOG_VRB("Update status: %s=%s", variable, value);
 #if INCLUDE_MQTT
   if (mqtt_active) {
     char buff[(IN_FILE_NAME_LEN * 2)];
