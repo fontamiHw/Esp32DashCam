@@ -442,13 +442,16 @@ static void prepPIR() {
 }
 
 static void prepAcc() {
+  LOG_INF("Preparing accelerometer");
   if (accUse) {
-    LOG_INF("Preparing accelerometer SPI Bus");
+    LOG_INF("accelerometer In use");
     if (accCS) pinMode(accCS, INPUT_PULLDOWN); 
     else {
       accUse = false;
       LOG_WRN("No accelerometer pin defined");
     }
+  } else {
+    LOG_INF("accelerometer Not in use");
   }
 }
 
