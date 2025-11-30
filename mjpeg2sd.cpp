@@ -7,6 +7,7 @@
 */
 
 #include "appGlobals.h"
+#include "appDefaultConfig.h"
 
 #define FB_CNT 4 // number of frame buffers
 
@@ -789,10 +790,10 @@ bool prepRecording() {
     }
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
-      LOG_INF("- attach CS to pin %u", accCS);
-      LOG_INF("- SDO Mode %u", accSDO);
-      LOG_INF("- attach SDO to pin %u", accSDOPin);
-      LOG_INF("- Interrupt used %u", accINT);
+      LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
+      LOG_INF("- SDO Mode %s", getSelectionOption("accSDO", accSDO));
+      LOG_INF("- attach SDO to pin %s", getSelectionOption("accSDOPin", accSDOPin));
+      LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
     }
 #endif
     if (useMotion) LOG_INF("- move in front of camera");

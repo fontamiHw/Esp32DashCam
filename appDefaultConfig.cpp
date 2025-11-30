@@ -1,5 +1,104 @@
 #include "appGlobals.h"
+#include "appDefaultConfig.h"
 
+// Function to get the selection options string for a given parameter name
+String getSelectionOptions(const char* paramName) {
+  String config = String(appConfig);
+  String searchName = String(paramName) + "~";
+  
+  int paramPos = config.indexOf(searchName);
+  if (paramPos == -1) {
+    return ""; // Parameter not found
+  }
+  
+  // Find the line containing this parameter
+  int lineStart = paramPos;
+  while (lineStart > 0 && config.charAt(lineStart - 1) != '\n') {
+    lineStart--;
+  }
+  
+  int lineEnd = config.indexOf('\n', paramPos);
+  if (lineEnd == -1) {
+    lineEnd = config.length();
+  }
+  
+  String line = config.substring(lineStart, lineEnd);
+  
+  // Parse the line format: paramName~defaultValue~group~S:option1:option2:option3~description
+  int tildaCount = 0;
+  int lastTildaPos = -1;
+  int currentPos = 0;
+  
+  // Find the 4th tilda (before the S: part)
+  while (currentPos < line.length() && tildaCount < 3) {
+    if (line.charAt(currentPos) == '~') {
+      tildaCount++;
+      if (tildaCount == 3) {
+        lastTildaPos = currentPos;
+      }
+    }
+    currentPos++;
+  }
+  
+  if (lastTildaPos == -1) {
+    return ""; // Invalid format
+  }
+  
+  // Find the next tilda after the S: part
+  int nextTildaPos = line.indexOf('~', lastTildaPos + 1);
+  if (nextTildaPos == -1) {
+    nextTildaPos = line.length();
+  }
+  
+  String selectionPart = line.substring(lastTildaPos + 1, nextTildaPos);
+  
+  // Check if it starts with "S:" (case insensitive)
+  if (selectionPart.length() > 2 && 
+      (selectionPart.charAt(0) == 'S' || selectionPart.charAt(0) == 's') && 
+      selectionPart.charAt(1) == ':') {
+    return selectionPart.substring(2); // Return everything after "S:"
+  }
+  
+  return ""; // Not a selection parameter
+}
+
+// Function to get a specific selection option by index for a given parameter name
+String getSelectionOption(const char* paramName, int index) {
+  String options = getSelectionOptions(paramName);
+  
+  if (options.length() == 0) {
+    return ""; // No selection options found
+  }
+  
+  if (index < 0) {
+    return ""; // Invalid index
+  }
+  
+  // Split the options by ':' and return the option at the specified index
+  int currentIndex = 0;
+  int startPos = 0;
+  
+  while (currentIndex < index && startPos < options.length()) {
+    int colonPos = options.indexOf(':', startPos);
+    if (colonPos == -1) {
+      return ""; // Index out of bounds
+    }
+    startPos = colonPos + 1;
+    currentIndex++;
+  }
+  
+  if (currentIndex != index) {
+    return ""; // Index out of bounds
+  }
+  
+  // Find the end of the current option
+  int endPos = options.indexOf(':', startPos);
+  if (endPos == -1) {
+    endPos = options.length(); // Last option
+  }
+  
+  return options.substring(startPos, endPos);
+}
 
 /************** default app configuration **************/
 const char* appConfig = R"~(

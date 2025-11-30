@@ -23,6 +23,7 @@
 //
 
 #include "appGlobals.h"
+#include "appDefaultConfig.h"
 
 #if INCLUDE_PERIPH
 #include "driver/ledc.h"
@@ -444,12 +445,9 @@ static void prepPIR() {
 static void prepAcc() {
   LOG_INF("Preparing accelerometer");
   if (accUse) {
-    LOG_INF("accelerometer In use");
-    if (accCS) pinMode(accCS, INPUT_PULLDOWN); 
-    else {
-      accUse = false;
-      LOG_WRN("No accelerometer pin defined");
-    }
+    LOG_INF("accelerometer In use on address %s ", getSelectionOption("accSDO", accSDO));
+    LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
+    pinMode(accCS, INPUT_PULLDOWN); 
   } else {
     LOG_INF("accelerometer Not in use");
   }
