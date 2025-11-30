@@ -439,8 +439,9 @@ static boolean processFrame() {
     }
   }
 #endif
-  // either active PIR, Motion, or force start button will start capture, neither active will stop capture
-  isCapturing = forceRecord | captureMotion | pirVal;
+  // either active PIR, Motion, accellerometer, or force start button will start capture, 
+  // neither active will stop capture
+  isCapturing = forceRecord | captureMotion | pirVal | accVal;
   if (forceRecord || wasRecording || doRecording) {
     if (forceRecord && !wasRecording) wasRecording = true;
     else if (!forceRecord && wasRecording) wasRecording = false;

@@ -127,7 +127,8 @@ bool getPIRval() {
 bool getAccVal() {
   // get accelerometer status
   // MIK da studiare come ritornare che si e' attivi
-  return digitalRead(accCS);
+  bool ret = accCS > 0;
+  return ret;
 }
 
 void buzzerAlert(bool buzzerOn) {
