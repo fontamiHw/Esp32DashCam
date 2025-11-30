@@ -1,11 +1,6 @@
 #include "appGlobals.h"
 
 
-/*
-* accINT~0~3~S:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
-* accSDO~High~3~S:High:Low~Pin used for SDO on Accellerometer
-*/
-
 /************** default app configuration **************/
 const char* appConfig = R"~(
 ST_SSID~~99~~na
@@ -115,11 +110,11 @@ lampType~0~3~S:Manual:PIR~How lamp activated
 SVactive~0~3~C~Enable servo use
 pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
-accUse~0~3~C~Use Accellerometer (ADXL345) for start Video
+accUse~1~3~C~Use Accellerometer (ADXL345) for start Video
 accCS~~3~N~Pin used for CS on Accellerometer
-accSDO~~3~N~Pin used for SDO on Accellerometer
-accSDA~~3~N~Pin used for SDA on Accellerometer
-accSCL~~3~N~Pin used for SCL on Accellerometer
+accSDO~0~3~S:High (0x1D):Low(0x53)~Address Selection for Accellerometer
+accSDOPin~~3~N~Pin used for SDO on Accellerometer
+accINT~0~3~S:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor

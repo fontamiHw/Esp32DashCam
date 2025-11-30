@@ -55,10 +55,8 @@ int buzzerPin; // if buzzerUse is true
 #define MAX_INT_SELECTION_STR 10
 int  accCS;
 int  accSDO;
-int  accSDA;
-int  accSCL;
-// char accINT[MAX_INT_SELECTION_STR]="";
-
+int  accSDOPin;
+int accINT;
 
 // Camera servos 
 int servoPanPin;

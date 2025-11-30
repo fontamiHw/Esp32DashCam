@@ -95,10 +95,8 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
   else if (!strcmp(variable, "accCS")) accCS = intVal;
   else if (!strcmp(variable, "accSDO")) accSDO = intVal;
-  else if (!strcmp(variable, "accSDA")) accSDA = intVal;
-  else if (!strcmp(variable, "accSCL")) accSCL = intVal;
-  // else if (!strcmp(variable, "accINT")) snprintf(accINT, sizeof(accINT), "%s", value);
-
+  else if (!strcmp(variable, "accSDOPin")) accSDOPin = intVal;
+  else if (!strcmp(variable, "accINT")) accINT = intVal;
   else if (!strcmp(variable, "lampLevel")) {
     lampLevel = intVal;
     if (!lampType) setLamp(lampLevel); // manual

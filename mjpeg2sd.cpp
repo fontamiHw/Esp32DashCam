@@ -789,10 +789,9 @@ bool prepRecording() {
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
       LOG_INF("- attach CS to pin %u", accCS);
-      LOG_INF("- attach SDD to pin %u", accSDO);
-      LOG_INF("- attach SDA to pin %u", accSDA);
-      LOG_INF("- attach SCL to pin %u", accSCL);
-      // LOG_INF("- Interrupt used %s", accINT);
+      LOG_INF("- SDO Mode %u", accSDO);
+      LOG_INF("- attach SDO to pin %u", accSDOPin);
+      LOG_INF("- Interrupt used %u", accINT);
     }
 #endif
     if (useMotion) LOG_INF("- move in front of camera");
