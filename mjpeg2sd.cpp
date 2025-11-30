@@ -422,18 +422,17 @@ static boolean processFrame() {
   if (!useMotion && doMonitor(true)) checkMotion(fb, false, true); // calc light level only
 
 #if INCLUDE_PERIPH
-  if (pirUse) {
-    pirVal = getPIRval();
-    if (pirVal && !isCapturing) {
-      // start of PIR detection, switch on lamp if requested
-      if (lampAuto && nightTime) setLamp(lampLevel);
-      notifyMotion(fb);
+  if (pirUse || accUse) {
+    if (pirUse) {
+      pirVal = getPIRval();
     }
-  }
-  if (accUse) {
-    accVal = getAccVal();
-    if (accVal && !isCapturing) {
-      // start of accelerometer detection, switch on lamp if requested
+    if (accUse) {
+      accVal = getAccVal();
+      // LOG_DBG("Accellerometer value: %d", accVal);
+    }
+    
+    if ((pirVal || accVal) && !isCapturing) {
+      // start of PIR detection, switch on lamp if requested
       if (lampAuto && nightTime) setLamp(lampLevel);
       notifyMotion(fb);
     }
@@ -442,6 +441,12 @@ static boolean processFrame() {
   // either active PIR, Motion, accellerometer, or force start button will start capture, 
   // neither active will stop capture
   isCapturing = forceRecord | captureMotion | pirVal | accVal;
+  // LOG_DBG("Capture status: %s (Motion: %s, PIR: %s, Acc: %s, Button: %s)", 
+  //          isCapturing ? "ON" : "OFF",
+  //          captureMotion ? "YES" : "NO",
+  //          pirVal ? "YES" : "NO",
+  //          accVal ? "YES" : "NO",
+  //          forceRecord ? "YES" : "NO");
   if (forceRecord || wasRecording || doRecording) {
     if (forceRecord && !wasRecording) wasRecording = true;
     else if (!forceRecord && wasRecording) wasRecording = false;
