@@ -50,13 +50,15 @@ int pirPin; // if pirUse is true
 int lampPin;
 int buzzerPin; // if buzzerUse is true
 
+
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
 int  accCS;
-int  accSDD;
+int  accSDO;
 int  accSDA;
 int  accSCL;
 // char accINT[MAX_INT_SELECTION_STR]="";
+
 
 // Camera servos 
 int servoPanPin;

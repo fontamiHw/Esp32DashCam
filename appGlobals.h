@@ -422,10 +422,11 @@ extern int srtInterval;
 
 // accelerometer (ADXL345) pins
 extern int  accCS;
-extern int  accSDD;
+extern int  accSDO;
 extern int  accSDA;
 extern int  accSCL;
 // extern char accINT[];
+
 
 // Pan / Tilt Servos 
 extern int servoPanPin; 

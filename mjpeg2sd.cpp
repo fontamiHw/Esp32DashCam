@@ -82,6 +82,7 @@ bool timeLapseOn = false;
 int dashCamOn = 0; // whether to use / duration of dashcam style continuous recording
 static bool pirVal = false;
 static bool accVal = false;
+static bool oldAccVal = false;
 
 #ifndef CONFIG_IDF_TARGET_ESP32C3
 framesize_t maxFS = FRAMESIZE_SVGA; // default
@@ -426,27 +427,28 @@ static boolean processFrame() {
     if (pirUse) {
       pirVal = getPIRval();
     }
+
     if (accUse) {
       accVal = getAccVal();
-      // LOG_DBG("Accellerometer value: %d", accVal);
-    }
+    } 
     
     if ((pirVal || accVal) && !isCapturing) {
       // start of PIR detection, switch on lamp if requested
       if (lampAuto && nightTime) setLamp(lampLevel);
       notifyMotion(fb);
     }
+  } else if (!accUse) {
+    accVal = false;
   }
+
+    if (oldAccVal != accVal) {
+      oldAccVal = accVal;
+      LOG_DBG("Accellerometer value: %d", oldAccVal);
+    }
 #endif
   // either active PIR, Motion, accellerometer, or force start button will start capture, 
   // neither active will stop capture
   isCapturing = forceRecord | captureMotion | pirVal | accVal;
-  // LOG_DBG("Capture status: %s (Motion: %s, PIR: %s, Acc: %s, Button: %s)", 
-  //          isCapturing ? "ON" : "OFF",
-  //          captureMotion ? "YES" : "NO",
-  //          pirVal ? "YES" : "NO",
-  //          accVal ? "YES" : "NO",
-  //          forceRecord ? "YES" : "NO");
   if (forceRecord || wasRecording || doRecording) {
     if (forceRecord && !wasRecording) wasRecording = true;
     else if (!forceRecord && wasRecording) wasRecording = false;
@@ -787,7 +789,7 @@ bool prepRecording() {
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
       LOG_INF("- attach CS to pin %u", accCS);
-      LOG_INF("- attach SDD to pin %u", accSDD);
+      LOG_INF("- attach SDD to pin %u", accSDO);
       LOG_INF("- attach SDA to pin %u", accSDA);
       LOG_INF("- attach SCL to pin %u", accSCL);
       // LOG_INF("- Interrupt used %s", accINT);
