@@ -444,13 +444,12 @@ static void prepPIR() {
 static void prepAcc() {
   if (accUse) {
     LOG_INF("Preparing accelerometer SPI Bus");
-    if (accCS) pinMode(accCS, INPUT_PULLDOWN); // pulled high for active
+    if (accCS) pinMode(accCS, INPUT_PULLDOWN); 
     else {
       accUse = false;
       LOG_WRN("No accelerometer pin defined");
     }
   }
-  if (relayPin) pinMode(relayPin, OUTPUT);
 }
 
 /********************************* joystick *************************************/
@@ -742,6 +741,7 @@ void prepPeripherals() {
   setupBatt();
   setupLamp();
   prepPIR();
+  prepAcc();
   prepTemperature();
   prepServos();  
   prepJoystick();

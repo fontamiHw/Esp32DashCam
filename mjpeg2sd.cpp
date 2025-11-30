@@ -439,6 +439,7 @@ static boolean processFrame() {
     }
   } else if (!accUse) {
     accVal = false;
+    pinMode(accCS, INPUT_PULLDOWN); 
   }
 
     if (oldAccVal != accVal) {
