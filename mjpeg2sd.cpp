@@ -445,10 +445,10 @@ static boolean processFrame() {
 
     if (oldAccVal != accVal) {
       oldAccVal = accVal;
-      LOG_DBG("Accellerometer value: %d", oldAccVal);
+      LOG_DBG("Accelerometer value: %d", oldAccVal);
     }
 #endif
-  // either active PIR, Motion, accellerometer, or force start button will start capture, 
+  // either active PIR, Motion, accelerometer, or force start button will start capture, 
   // neither active will stop capture
   isCapturing = forceRecord | captureMotion | pirVal | accVal;
   if (forceRecord || wasRecording || doRecording) {
