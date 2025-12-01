@@ -3,3 +3,4 @@
 
 void prepAcc();
 TaskHandle_t getTaskId();
+bool getAccVal();
