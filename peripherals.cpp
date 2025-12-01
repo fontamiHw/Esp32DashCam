@@ -127,9 +127,8 @@ bool getPIRval() {
 bool getAccVal() {
   // get accelerometer status
   // MIK da studiare come ritornare che si e' attivi
-  // bool ret = accCS > 0;
-  // return ret;
-  return false;
+  bool ret = accCS > 0;
+  return ret;
 }
 
 void buzzerAlert(bool buzzerOn) {
@@ -445,7 +444,7 @@ static void prepPIR() {
 static void prepAcc() {
   LOG_INF("Preparing accelerometer");
   if (accUse) {
-    // LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
+    LOG_INF("activationg CS on %s", getSelectionOption("", accCS));
   } else {
     LOG_INF("accelerometer Not in use");
   }

@@ -440,7 +440,6 @@ static boolean processFrame() {
     }
   } else if (!accUse) {
     accVal = false;
-    // pinMode(accCS, INPUT_PULLDOWN); 
   }
 
     if (oldAccVal != accVal) {
@@ -790,7 +789,7 @@ bool prepRecording() {
     }
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
-      // LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
+      LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
       // LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
     }
 #endif
