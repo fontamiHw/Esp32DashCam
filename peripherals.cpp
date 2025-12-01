@@ -25,6 +25,7 @@
 
 #include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "accelerometer.h"
 
 #if INCLUDE_PERIPH
 #include "driver/ledc.h"
@@ -439,15 +440,6 @@ static void prepPIR() {
     }
   }
   if (relayPin) pinMode(relayPin, OUTPUT);
-}
-
-static void prepAcc() {
-  LOG_INF("Preparing accelerometer");
-  if (accUse) {
-    LOG_INF("activationg CS on %s", getSelectionOption("", accCS));
-  } else {
-    LOG_INF("accelerometer Not in use");
-  }
 }
 
 /********************************* joystick *************************************/

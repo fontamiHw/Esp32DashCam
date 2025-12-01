@@ -97,7 +97,7 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
   else if (!strcmp(variable, "accCS")) {
     accCS = intVal;    
-    LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
+    LOG_INF("activation CS on %s", getSelectionOption("accCS", accCS));
   }
   // else if (!strcmp(variable, "accINT")) accINT = intVal;
   // lamp

@@ -8,6 +8,7 @@
 
 #include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "accelerometer.h"
 
 #define FB_CNT 4 // number of frame buffers
 
@@ -744,7 +745,7 @@ static bool startSDtasks() {
   // tasks to manage SD card operation
   xTaskCreate(&playbackTask, "playbackTask", PLAYBACK_STACK_SIZE, NULL, PLAY_PRI, &playbackHandle);
   xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, CAPTURE_PRI, &captureHandle);
-  if (captureHandle == NULL) {
+  if (captureHandle == NULL || getTaskId() == NULL) {
     // Usually insufficient memory
     OTAprereq();
     return false;
