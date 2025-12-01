@@ -94,8 +94,8 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   else if (!strcmp(variable, "pirUse")) pirUse = (bool)intVal;
   // accellerometer
   else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
-  else if (!strcmp(variable, "accCS")) accCS = intVal;
-  else if (!strcmp(variable, "accINT")) accINT = intVal;
+  // else if (!strcmp(variable, "accCS")) accCS = intVal;
+  // else if (!strcmp(variable, "accINT")) accINT = intVal;
   // lamp
   else if (!strcmp(variable, "lampLevel")) {
     lampLevel = intVal;

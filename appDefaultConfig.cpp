@@ -100,6 +100,88 @@ String getSelectionOption(const char* paramName, int index) {
   return options.substring(startPos, endPos);
 }
 
+/*
+Configuration Format Structure
+
+Each line follows this pattern:
+parameterName~defaultValue~group~type~description
+
+Field Meanings:
+1. Parameter Name - The unique identifier for the setting
+2. Default Value - The initial/default value for this parameter
+3. Group - Numeric group identifier (organizes parameters into categories)
+4. Type - Defines the input type and validation:
+   - S:option1:option2:option3 - Selection dropdown with predefined options
+   - T - Text input field
+   - N - Numeric input field
+   - C - Checkbox (boolean)
+   - A - Action button
+   - na - Not available/hidden parameter
+5. Description - Human-readable explanation of what the parameter does
+
+
+Group Categories (based on the numeric codes):
+- Group 0 - Network & WiFi settings
+- Group 1 - Motion detection & timelapse
+- Group 2 - Communication (SMTP, MQTT, external services)
+- Group 3 - Hardware peripherals (sensors, pins, I/O)
+- Group 4 - Remote control & motor settings
+- Group 5 - Photogrammetry & stepper motor
+- Group 6 - Servo control settings
+- Group 7 - Audio configuration
+- Group 8 - RTSP streaming settings
+- Group 9 - Ethernet configuration
+- Group 98 - Camera settings
+- Group 99 - System/internal settings
+
+
+// Selection parameter (dropdown)
+netMode~0~99~S:WiFi:Ethernet:Eth+AP~Network interface selection
+//      ^ ^  ^^ ^                    ^
+//      | |  || |                    description
+//      | |  || selection options (WiFi, Ethernet, Eth+AP)
+//      | |  |group 99 (system)
+//      | default value (0 = WiFi)
+//      parameter name
+
+// Text input parameter
+ST_ip~~0~T~Static IP address
+//    ^ ^ ^ ^
+//    | | | description
+//    | | text input type
+//    | group 0 (network)
+//    empty default value
+
+// Checkbox parameter
+allowAP~1~0~C~Allow simultaneous AP
+//      ^ ^ ^ ^
+//      | | | description
+//      | | checkbox type
+//      | group 0 (network)
+//      default true (1)
+
+// Numeric parameter
+refreshVal~5~2~N~Web page refresh rate (secs)
+//         ^ ^ ^ ^
+//         | | | description
+//         | | numeric input type
+//         | group 2 (communication)
+//         default value 5
+
+// Action button
+AtakePhotos~Start~5~A~Start photogrammetry
+//          ^     ^ ^ ^
+//          |     | | description
+//          |     | action button type
+//          |     group 5 (photogrammetry)
+//          button label text
+*/
+
+
+/*
+*
+accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer
+*/
 /************** default app configuration **************/
 const char* appConfig = R"~(
 ST_SSID~~99~~na
@@ -210,7 +292,6 @@ SVactive~0~3~C~Enable servo use
 pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
 accUse~0~3~C~Use Accellerometer (ADXL345) for start Video
-accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer
 accINT~0~3~S:NO INT:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo

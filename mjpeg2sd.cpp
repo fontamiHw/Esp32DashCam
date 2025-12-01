@@ -790,8 +790,8 @@ bool prepRecording() {
     }
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
-      LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
-      LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
+      // LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
+      // LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
     }
 #endif
     if (useMotion) LOG_INF("- move in front of camera");

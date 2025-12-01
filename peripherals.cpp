@@ -55,8 +55,8 @@ int buzzerPin; // if buzzerUse is true
 
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
-int accCS;
-int accINT;
+int accCS=0;
+int accINT=0;
 
 // Camera servos 
 int servoPanPin;
@@ -127,8 +127,9 @@ bool getPIRval() {
 bool getAccVal() {
   // get accelerometer status
   // MIK da studiare come ritornare che si e' attivi
-  bool ret = accCS > 0;
-  return ret;
+  // bool ret = accCS > 0;
+  // return ret;
+  return false;
 }
 
 void buzzerAlert(bool buzzerOn) {
@@ -444,8 +445,7 @@ static void prepPIR() {
 static void prepAcc() {
   LOG_INF("Preparing accelerometer");
   if (accUse) {
-    LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
-    //pinMode(accCS, INPUT_PULLDOWN); 
+    // LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
   } else {
     LOG_INF("accelerometer Not in use");
   }
