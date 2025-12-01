@@ -177,11 +177,6 @@ AtakePhotos~Start~5~A~Start photogrammetry
 //          button label text
 */
 
-
-/*
-*
-accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer
-*/
 /************** default app configuration **************/
 const char* appConfig = R"~(
 ST_SSID~~99~~na
@@ -293,6 +288,7 @@ pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
 accUse~0~3~C~Use Accellerometer (ADXL345) for start Video
 accINT~0~3~S:NO INT:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
+accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor
