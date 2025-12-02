@@ -205,7 +205,6 @@
 #define UART_STACK_SIZE (1024 * 2)
 #define INTERCOM_STACK_SIZE (1024 * 2)
 #define PLAYBACK_STACK_SIZE (1024 * 2)
-#define ACC_STACK_SIZE (1024 * 2)
 
 // task priorities
 #define CAPTURE_PRI 6
@@ -227,7 +226,6 @@
 #define UART_PRI 1
 #define DS18B20_PRI 1
 #define BATT_PRI 1
-#define ACC_PRI 3
 
 /******************** Function declarations *******************/
 
