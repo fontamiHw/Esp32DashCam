@@ -204,6 +204,7 @@
 #define HB_STACK_SIZE (1024 * 2)
 #define UART_STACK_SIZE (1024 * 2)
 #define INTERCOM_STACK_SIZE (1024 * 2)
+#define PLAYBACK_STACK_SIZE (1024 * 2)
 
 // task priorities
 #define CAPTURE_PRI 6

@@ -25,6 +25,7 @@
 
 #include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "accelerometer.h"
 
 #if INCLUDE_PERIPH
 #include "driver/ledc.h"
@@ -55,8 +56,8 @@ int buzzerPin; // if buzzerUse is true
 
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
-int accCS;
-int accINT;
+int accCS=0;
+int accINT=0;
 
 // Camera servos 
 int servoPanPin;
@@ -122,13 +123,6 @@ void setLamp(uint8_t lampVal);
 bool getPIRval() {
   // get PIR or radar sensor status 
   return digitalRead(pirPin); 
-}
-
-bool getAccVal() {
-  // get accelerometer status
-  // MIK da studiare come ritornare che si e' attivi
-  bool ret = accCS > 0;
-  return ret;
 }
 
 void buzzerAlert(bool buzzerOn) {
@@ -439,16 +433,6 @@ static void prepPIR() {
     }
   }
   if (relayPin) pinMode(relayPin, OUTPUT);
-}
-
-static void prepAcc() {
-  LOG_INF("Preparing accelerometer");
-  if (accUse) {
-    LOG_INF("activationg CS on %s", getSelectionOption("accCS", accCS));
-    //pinMode(accCS, INPUT_PULLDOWN); 
-  } else {
-    LOG_INF("accelerometer Not in use");
-  }
 }
 
 /********************************* joystick *************************************/

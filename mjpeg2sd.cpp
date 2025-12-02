@@ -8,6 +8,7 @@
 
 #include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "accelerometer.h"
 
 #define FB_CNT 4 // number of frame buffers
 
@@ -440,15 +441,14 @@ static boolean processFrame() {
     }
   } else if (!accUse) {
     accVal = false;
-    // pinMode(accCS, INPUT_PULLDOWN); 
   }
 
     if (oldAccVal != accVal) {
       oldAccVal = accVal;
-      LOG_DBG("Accellerometer value: %d", oldAccVal);
+      LOG_DBG("Accelerometer value: %d", oldAccVal);
     }
 #endif
-  // either active PIR, Motion, accellerometer, or force start button will start capture, 
+  // either active PIR, Motion, accelerometer, or force start button will start capture, 
   // neither active will stop capture
   isCapturing = forceRecord | captureMotion | pirVal | accVal;
   if (forceRecord || wasRecording || doRecording) {
@@ -745,7 +745,7 @@ static bool startSDtasks() {
   // tasks to manage SD card operation
   xTaskCreate(&playbackTask, "playbackTask", PLAYBACK_STACK_SIZE, NULL, PLAY_PRI, &playbackHandle);
   xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, CAPTURE_PRI, &captureHandle);
-  if (captureHandle == NULL) {
+  if (captureHandle == NULL || getTaskId() == NULL) {
     // Usually insufficient memory
     OTAprereq();
     return false;
@@ -791,7 +791,7 @@ bool prepRecording() {
     if (accUse) {
       LOG_INF("- activate accelerometer detection");
       LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
-      LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
+      // LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
     }
 #endif
     if (useMotion) LOG_INF("- move in front of camera");
