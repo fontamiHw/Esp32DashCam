@@ -10,7 +10,7 @@
 void setup() {
   logSetup();
   LOG_INF("Selected board %s", CAM_BOARD);
-  
+
   if (!DBG_ON) esp_log_level_set("*", ESP_LOG_ERROR); // show ESP_LOG_ERROR messages during init
   // prep storage
   if (startStorage()) {
@@ -41,10 +41,10 @@ void setup() {
   else {
     // start rest of services
 #ifndef AUXILIARY
-    startSustainTasks(); 
+    startSustainTasks();
 #endif
 #if INCLUDE_SMTP
-    prepSMTP(); 
+    prepSMTP();
 #endif
 #if INCLUDE_FTP_HFS
     prepUpload();
@@ -54,12 +54,12 @@ void setup() {
 #endif
 #if INCLUDE_PERIPH
     prepPeripherals();
-  #if INCLUDE_MCPWM 
+  #if INCLUDE_MCPWM
     prepMotors();
   #endif
 #endif
 #if INCLUDE_AUDIO
-    prepAudio(); 
+    prepAudio();
 #endif
 #if INCLUDE_TGRAM
     prepTelegram();

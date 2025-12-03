@@ -724,7 +724,11 @@ void prepPeripherals() {
   setupBatt();
   setupLamp();
   prepPIR();
+  
+#if INCLUDE_ACCELEROMETER 
   prepAcc();
+#endif
+
   prepTemperature();
   prepServos();  
   prepJoystick();

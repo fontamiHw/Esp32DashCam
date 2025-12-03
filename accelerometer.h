@@ -6,5 +6,6 @@
 #define ACC_PRI 2
 
 void prepAcc();
-TaskHandle_t getTaskId();
+TaskHandle_t getAccelerometerTaskId();
 bool getAccVal();
+void printAccelerometerStatus();

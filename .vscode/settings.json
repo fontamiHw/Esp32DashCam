@@ -1,0 +1,47 @@
+{
+  // C/C++ Formatting Settings
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  // Editor Settings for C/C++
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[arduino]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  // General Editor Settings
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.tabSize": 2,
+  // C/C++ IntelliSense Settings
+  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.errorSquiggles": "enabled",
+  "C_Cpp.autocomplete": "default",
+  // Files Settings
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  // Arduino/ESP32 specific
+  "files.associations": {
+    "*.ino": "cpp",
+    "*.h": "cpp",
+    "*.cpp": "cpp"
+  }
+}

@@ -6,34 +6,35 @@
   s60sc 2020, 2022, 2024
 */
 
-#include "appGlobals.h"
-#include "appDefaultConfig.h"
 #include "accelerometer.h"
+#include "appDefaultConfig.h"
+#include "appGlobals.h"
 
-#define FB_CNT 4 // number of frame buffers
+#define FB_CNT 4  // number of frame buffers
 
 // user parameters set from web
-bool useMotion  = true; // whether to use camera for motion detection (with motionDetect.cpp)
-bool dbgMotion  = false;
-bool forceRecord = false; // Recording enabled by rec button
+bool useMotion = true;  // whether to use camera for motion detection (with motionDetect.cpp)
+bool dbgMotion = false;
+bool forceRecord = false;  // Recording enabled by rec button
 
 // motion detection parameters
-int moveStartChecks = 5; // checks per second for start motion
-int moveStopSecs = 2; // secs between each check for stop, also determines post motion time
-int maxFrames = 20000; // maximum number of frames in video before auto close
+int moveStartChecks = 5;  // checks per second for start motion
+int moveStopSecs = 2;     // secs between each check for stop, also determines post motion time
+int maxFrames = 20000;    // maximum number of frames in video before auto close
 
-// record timelapse avi independently of motion capture, file name has same format as avi except ends with T
-int tlSecsBetweenFrames; // too short interval will interfere with other activities
-int tlDurationMins; // a new file starts when previous ends
-int tlPlaybackFPS;  // rate to playback the timelapse, min 1
+// record timelapse avi independently of motion capture, file name has same format as avi except
+// ends with T
+int tlSecsBetweenFrames;  // too short interval will interfere with other activities
+int tlDurationMins;       // a new file starts when previous ends
+int tlPlaybackFPS;        // rate to playback the timelapse, min 1
 
 // status & control fields
 uint8_t FPS = 0;
 bool nightTime = false;
-uint8_t fsizePtr; // index to frameData[]
-uint8_t minSeconds = 5; // default min video length (includes POST_MOTION_TIME)
-bool doRecording = true; // whether to capture to SD or not
-uint8_t xclkMhz = 20; // camera clock rate MHz
+uint8_t fsizePtr;         // index to frameData[]
+uint8_t minSeconds = 5;   // default min video length (includes POST_MOTION_TIME)
+bool doRecording = true;  // whether to capture to SD or not
+uint8_t xclkMhz = 20;     // camera clock rate MHz
 bool doKeepFrame = false;
 static bool haveSrt = false;
 char camModel[11];
@@ -43,16 +44,16 @@ size_t maxFrameBuffSize;
 static int frameLimit;
 
 // header and reporting info
-static uint32_t vidSize; // total video size
+static uint32_t vidSize;  // total video size
 static uint16_t frameCnt;
-static uint32_t startTime; // total overall time
-static uint32_t dTimeTot; // total frame decode/monitor time
-static uint32_t fTimeTot; // total frame buffering time
-static uint32_t wTimeTot; // total SD write time
-static uint32_t oTime; // file opening time
-static uint32_t cTime; // file closing time
-static uint32_t sTime; // file streaming time
-static uint32_t frameInterval; // units of us between frames
+static uint32_t startTime;      // total overall time
+static uint32_t dTimeTot;       // total frame decode/monitor time
+static uint32_t fTimeTot;       // total frame buffering time
+static uint32_t wTimeTot;       // total SD write time
+static uint32_t oTime;          // file opening time
+static uint32_t cTime;          // file closing time
+static uint32_t sTime;          // file streaming time
+static uint32_t frameInterval;  // units of us between frames
 
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
@@ -67,7 +68,7 @@ static size_t readLen;
 static uint8_t recFPS;
 static uint32_t recDuration;
 static uint8_t saveFPS = 99;
-bool doPlayback = false; // controls playback
+bool doPlayback = false;  // controls playback
 
 // task control
 TaskHandle_t captureHandle = NULL;
@@ -77,25 +78,27 @@ static SemaphoreHandle_t playbackSemaphore;
 SemaphoreHandle_t frameSemaphore[MAX_STREAMS] = {NULL};
 SemaphoreHandle_t motionSemaphore = NULL;
 SemaphoreHandle_t aviMutex = NULL;
-static volatile bool isPlaying = false; // controls playback on app
+static volatile bool isPlaying = false;  // controls playback on app
 bool isCapturing = false;
-bool stopPlayback = false; // controls if playback allowed
+bool stopPlayback = false;  // controls if playback allowed
 bool timeLapseOn = false;
-int dashCamOn = 0; // whether to use / duration of dashcam style continuous recording
+int dashCamOn = 0;  // whether to use / duration of dashcam style continuous recording
 static bool pirVal = false;
-static bool accVal = false;
-static bool oldAccVal = false;
 
 #ifndef CONFIG_IDF_TARGET_ESP32C3
-framesize_t maxFS = FRAMESIZE_SVGA; // default
+framesize_t maxFS = FRAMESIZE_SVGA;  // default
 
 /**************** timers & ISRs ************************/
 
 static void IRAM_ATTR frameISR() {
   // interrupt at current frame rate
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  if (isPlaying) xSemaphoreGiveFromISR (playbackSemaphore, &xHigherPriorityTaskWoken ); // notify playback to send frame
-  if (captureHandle != NULL) vTaskNotifyGiveFromISR(captureHandle, &xHigherPriorityTaskWoken); // wake capture task to process frame
+  if (isPlaying)
+    xSemaphoreGiveFromISR(playbackSemaphore,
+                          &xHigherPriorityTaskWoken);  // notify playback to send frame
+  if (captureHandle != NULL)
+    vTaskNotifyGiveFromISR(captureHandle,
+                           &xHigherPriorityTaskWoken);  // wake capture task to process frame
   if (xHigherPriorityTaskWoken == pdTRUE) portYIELD_FROM_ISR();
 }
 
@@ -112,11 +115,12 @@ void controlFrameTimer(bool restartTimer) {
     // (re)start timer interrupt for required framerate
     frameTimer = timerBegin(OneMHz);
     if (frameTimer) {
-      frameInterval = OneMHz / FPS; // in units of us
+      frameInterval = OneMHz / FPS;  // in units of us
       LOG_VRB("Frame timer interval %ums for FPS %u", frameInterval / 1000, FPS);
       timerAttachInterrupt(frameTimer, &frameISR);
-      timerAlarm(frameTimer, frameInterval, true, 0); // micro seconds
-    } else LOG_ERR("Failed to setup frameTimer");
+      timerAlarm(frameTimer, frameInterval, true, 0);  // micro seconds
+    } else
+      LOG_ERR("Failed to setup frameTimer");
   }
 }
 
@@ -127,7 +131,7 @@ static void openAvi() {
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
   dateFormat(partName, sizeof(partName), true);
-  STORAGE.mkdir(partName); // make date folder if not present
+  STORAGE.mkdir(partName);  // make date folder if not present
   dateFormat(partName, sizeof(partName), false);
   // open avi file with temporary name
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);
@@ -142,7 +146,7 @@ static void openAvi() {
   // initialisation of counters
   startTime = millis();
   frameCnt = fTimeTot = wTimeTot = dTimeTot = vidSize = 0;
-  highPoint = AVI_HEADER_LEN; // allot space for AVI header
+  highPoint = AVI_HEADER_LEN;  // allot space for AVI header
   prepAviIndex();
 }
 
@@ -152,7 +156,7 @@ static inline bool doMonitor(bool capturing) {
   // ratio for monitoring stop during capture / movement prior to capture
   uint8_t checkRate = (capturing) ? FPS * moveStopSecs : FPS / moveStartChecks;
   if (!checkRate) checkRate = 1;
-  if (++motionCnt / checkRate) motionCnt = 0; // time to check for motion
+  if (++motionCnt / checkRate) motionCnt = 0;  // time to check for motion
   return !(bool)motionCnt;
 }
 
@@ -175,21 +179,24 @@ static void timeLapse(camera_fb_t* fb, bool tlStop = false) {
         // initialise time lapse avi
         requiredFrames = tlDurationMins * 60 / tlSecsBetweenFrames;
         if (requiredFrames > maxFrames) {
-          LOG_WRN("Frames required for timelapse %u reduced to max frame limit %u", requiredFrames, maxFrames);
+          LOG_WRN("Frames required for timelapse %u reduced to max frame limit %u", requiredFrames,
+                  maxFrames);
           requiredFrames = maxFrames;
         }
         dateFormat(partName, sizeof(partName), true);
-        STORAGE.mkdir(partName); // make date folder if not present
+        STORAGE.mkdir(partName);  // make date folder if not present
         dateFormat(partName, sizeof(partName), false);
-        int tlen = snprintf(TLname, FILE_NAME_LEN - 1, "%s_%s_%u_%u_T.%s",
-                            partName, frameData[fsizePtr].frameSizeStr, tlPlaybackFPS, tlDurationMins, AVI_EXT);
+        int tlen =
+            snprintf(TLname, FILE_NAME_LEN - 1, "%s_%s_%u_%u_T.%s", partName,
+                     frameData[fsizePtr].frameSizeStr, tlPlaybackFPS, tlDurationMins, AVI_EXT);
         if (tlen > FILE_NAME_LEN - 1) LOG_WRN("file name truncated");
         if (STORAGE.exists(TLTEMP)) STORAGE.remove(TLTEMP);
         tlFile = STORAGE.open(TLTEMP, FILE_WRITE);
-        tlFile.write(aviHeader, AVI_HEADER_LEN); // space for header
+        tlFile.write(aviHeader, AVI_HEADER_LEN);  // space for header
         prepAviIndex(true);
-        LOG_INF("Started time lapse file %s, duration %u mins, for %u frames",  TLname, tlDurationMins, requiredFrames);
-        frameCntTL++; // to stop re-entering
+        LOG_INF("Started time lapse file %s, duration %u mins, for %u frames", TLname,
+                tlDurationMins, requiredFrames);
+        frameCntTL++;  // to stop re-entering
       }
       // switch on light before capture frame if nightTime
 #if INCLUDE_PERIPH
@@ -206,9 +213,9 @@ static void timeLapse(camera_fb_t* fb, bool tlStop = false) {
         uint16_t filler = (4 - (fb->len & 0x00000003)) & 0x00000003;
         uint32_t jpegSize = fb->len + filler;
         memcpy(hdrBuff + 4, &jpegSize, 4);
-        tlFile.write(hdrBuff, CHUNK_HDR); // jpeg frame details
+        tlFile.write(hdrBuff, CHUNK_HDR);  // jpeg frame details
         tlFile.write(fb->buf, jpegSize);
-        buildAviIdx(jpegSize, true, true); // save avi index for frame
+        buildAviIdx(jpegSize, true, true);  // save avi index for frame
         frameCntTL++;
         intervalCnt = 0;
         intervalMark = tlSecsBetweenFrames * saveFPS;  // recalc in case FPS changed
@@ -227,18 +234,19 @@ static void timeLapse(camera_fb_t* fb, bool tlStop = false) {
           tlFile.write(iSDbuffer, idxLen);
         } while (idxLen > 0);
         // add header
-        tlFile.seek(0, SeekSet); // start of file
+        tlFile.seek(0, SeekSet);  // start of file
         tlFile.write(aviHeader, AVI_HEADER_LEN);
         tlFile.close();
         STORAGE.rename(TLTEMP, TLname);
         frameCntTL = intervalCnt = 0;
         LOG_INF("Finished time lapse: %s", TLname);
 #if INCLUDE_FTP_HFS
-        if (autoUpload) fsStartTransfer(TLname); // Transfer it to remote ftp server if requested
+        if (autoUpload) fsStartTransfer(TLname);  // Transfer it to remote ftp server if requested
 #endif
       }
     }
-  } else frameCntTL = intervalCnt = 0;
+  } else
+    frameCntTL = intervalCnt = 0;
 }
 
 void keepFrame(camera_fb_t* fb) {
@@ -283,7 +291,7 @@ static void saveFrame(camera_fb_t* fb) {
   memcpy(iSDbuffer + highPoint, fb->buf + jpegSize - jpegRemain, jpegRemain);
   highPoint += jpegRemain;
 
-  buildAviIdx(jpegSize); // save avi index for frame
+  buildAviIdx(jpegSize);  // save avi index for frame
   vidSize += jpegSize + CHUNK_HDR;
   frameCnt++;
   fTime = millis() - fTime - wTime;
@@ -327,7 +335,7 @@ static bool closeAvi() {
   xSemaphoreTake(aviMutex, portMAX_DELAY);
   buildAviHdr(actualFPSint, fsizePtr, frameCnt);
   xSemaphoreGive(aviMutex);
-  aviFile.seek(0, SeekSet); // start of file
+  aviFile.seek(0, SeekSet);  // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN);
   aviFile.close();
   LOG_VRB("Final SD storage time %lu ms", millis() - cTime);
@@ -341,17 +349,19 @@ static bool closeAvi() {
 #endif
   if (vidDurationSecs >= minSeconds) {
     // name file to include actual dateTime, FPS, duration, and frame count
-    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%lu%s%s%s.%s",
-                        partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs,
+    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%lu%s%s%s.%s", partName,
+                        frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs,
                         haveWav ? "_S" : "", haveSrt ? "_M" : "", dashCamOn ? "_C" : "", AVI_EXT);
     if (alen > FILE_NAME_LEN - 1) LOG_WRN("file name truncated");
     STORAGE.rename(AVITEMP, aviFileName);
+    LOG_INF("writing Avi file with name: %s", aviFileName);
     LOG_VRB("AVI close time %lu ms", millis() - hTime);
     cTime = millis() - cTime;
 #if INCLUDE_TELEM
     stopTelemetry(aviFileName);
 #endif
-    if (dashCamOn) forceRecord = true; // restart continuous recording
+    if (dashCamOn)
+      forceRecord = true;  // restart continuous recording
     else {
       // AVI stats
       LOG_INF("******** AVI recording stats ********");
@@ -369,7 +379,9 @@ static bool closeAvi() {
       }
       LOG_INF("Average SD write speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
       LOG_INF("File open / completion times: %u ms / %u ms", oTime, cTime);
-      LOG_INF("Busy: %u%%", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
+      LOG_INF("Busy: %u%%",
+              std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration,
+                       (uint32_t)100));
       checkMemory();
       LOG_INF("*************************************");
 #if INCLUDE_FTP_HFS
@@ -378,7 +390,8 @@ static bool closeAvi() {
           // issue #380 - in case other files failed to transfer, do whole parent folder
           dateFormat(partName, sizeof(partName), true);
           fsStartTransfer(partName);
-        } else fsStartTransfer(aviFileName); // transfer this file to remote ftp server
+        } else
+          fsStartTransfer(aviFileName);  // transfer this file to remote ftp server
       }
 #endif
 #if INCLUDE_TGRAM
@@ -412,7 +425,7 @@ static boolean processFrame() {
     if (!streamBufferSize[i] && streamBuffer[i] != NULL) {
       memcpy(streamBuffer[i], fb->buf, fb->len);
       streamBufferSize[i] = fb->len;
-      xSemaphoreGive(frameSemaphore[i]); // signal frame ready for stream
+      xSemaphoreGive(frameSemaphore[i]);  // signal frame ready for stream
     }
   }
   if (doKeepFrame) {
@@ -421,45 +434,36 @@ static boolean processFrame() {
   }
 
   // determine if time to monitor
-  if (useMotion && doMonitor(isCapturing)) captureMotion = checkMotion(fb, isCapturing); // check 1 in N frames
-  if (!useMotion && doMonitor(true)) checkMotion(fb, false, true); // calc light level only
+  if (useMotion && doMonitor(isCapturing))
+    captureMotion = checkMotion(fb, isCapturing);                   // check 1 in N frames
+  if (!useMotion && doMonitor(true)) checkMotion(fb, false, true);  // calc light level only
 
 #if INCLUDE_PERIPH
-  if (pirUse || accUse) {
-    if (pirUse) {
-      pirVal = getPIRval();
-    }
-
-    if (accUse) {
-      accVal = getAccVal();
-    } 
-    
-    if ((pirVal || accVal) && !isCapturing) {
+  if (pirUse) {
+    pirVal = getPIRval();
+    if (pirVal && !isCapturing) {
       // start of PIR detection, switch on lamp if requested
       if (lampAuto && nightTime) setLamp(lampLevel);
       notifyMotion(fb);
     }
-  } else if (!accUse) {
-    accVal = false;
   }
-
-    if (oldAccVal != accVal) {
-      oldAccVal = accVal;
-      LOG_DBG("Accelerometer value: %d", oldAccVal);
-    }
 #endif
-  // either active PIR, Motion, accelerometer, or force start button will start capture, 
+  // either active PIR, Motion, or force start button will start capture,
   // neither active will stop capture
-  isCapturing = forceRecord | captureMotion | pirVal | accVal;
+  isCapturing = forceRecord | captureMotion | pirVal;
   if (forceRecord || wasRecording || doRecording) {
-    if (forceRecord && !wasRecording) wasRecording = true;
-    else if (!forceRecord && wasRecording) wasRecording = false;
+    if (forceRecord && !wasRecording)
+      wasRecording = true;
+    else if (!forceRecord && wasRecording)
+      wasRecording = false;
 
     if (isCapturing && !wasCapturing) {
       // movement has occurred, start recording
-      stopPlaying(); // terminate any playback
-      stopPlayback = true; // stop any subsequent playback
-      if (dashCamOn == 0) LOG_ALT("Capture started by %s%s%s", captureMotion ? "Motion " : "", pirVal ? "PIR" : "", forceRecord ? "Button" : "");
+      stopPlaying();        // terminate any playback
+      stopPlayback = true;  // stop any subsequent playback
+      if (dashCamOn == 0)
+        LOG_ALT("Capture started by %s%s%s", captureMotion ? "Motion " : "", pirVal ? "PIR" : "",
+                forceRecord ? "Button" : "");
 #if INCLUDE_MQTT
       if (mqtt_active) {
         sprintf(jsonBuff, "{\"RECORD\":\"ON\", \"TIME\":\"%s\"}", esp_log_system_timestamp());
@@ -468,7 +472,7 @@ static boolean processFrame() {
       }
 #endif
 #if INCLUDE_PERIPH
-      buzzerAlert(true); // sound buzzer if enabled
+      buzzerAlert(true);  // sound buzzer if enabled
 #endif
       openAvi();
       wasCapturing = true;
@@ -490,7 +494,8 @@ static boolean processFrame() {
         }
       }
 #if INCLUDE_PERIPH
-      if (buzzerUse && frameCnt / FPS >= buzzerDuration) buzzerAlert(false); // switch off after given period
+      if (buzzerUse && frameCnt / FPS >= buzzerDuration)
+        buzzerAlert(false);  // switch off after given period
 #endif
     }
 
@@ -498,8 +503,8 @@ static boolean processFrame() {
       // movement stopped
       finishRecording = true;
 #if INCLUDE_PERIPH
-      if (lampAuto) setLamp(0); // switch off lamp
-      buzzerAlert(false); // switch off buzzer
+      if (lampAuto) setLamp(0);  // switch off lamp
+      buzzerAlert(false);        // switch off buzzer
 #endif
     }
     wasCapturing = isCapturing;
@@ -509,7 +514,7 @@ static boolean processFrame() {
   if (finishRecording) {
     // cleanly finish recording (normal or forced)
     if (stopPlayback) closeAvi();
-    finishRecording = isCapturing = wasCapturing = stopPlayback = false; // allow for playbacks
+    finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
   }
   return res;
 }
@@ -519,7 +524,8 @@ static void captureTask(void* parameter) {
   uint32_t ulNotifiedValue;
   while (true) {
     ulNotifiedValue = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    if (ulNotifiedValue > FB_CNT) ulNotifiedValue = FB_CNT; // prevent too big queue if FPS excessive
+    if (ulNotifiedValue > FB_CNT)
+      ulNotifiedValue = FB_CNT;  // prevent too big queue if FPS excessive
     // may be more than one isr outstanding if the task delayed by SD write or jpeg decode
     while (ulNotifiedValue-- > 0) processFrame();
   }
@@ -532,7 +538,7 @@ uint8_t setFPS(uint8_t val) {
     FPS = val;
     // change frame timer which drives the task
     controlFrameTimer(true);
-    saveFPS = FPS; // used to reset FPS after playback
+    saveFPS = FPS;  // used to reset FPS after playback
   }
   return FPS;
 }
@@ -565,7 +571,7 @@ static void playbackFPS(const char* fname) {
   recDuration = fnameMeta.recDuration;
   // temp change framerate to recorded framerate
   FPS = recFPS;
-  controlFrameTimer(true); // set frametimer
+  controlFrameTimer(true);  // set frametimer
 }
 
 static void readSD() {
@@ -578,24 +584,25 @@ static void readSD() {
     LOG_VRB("SD read time %lu ms", millis() - rTime);
   }
   wTimeTot += millis() - rTime;
-  xSemaphoreGive(readSemaphore); // signal that ready
+  xSemaphoreGive(readSemaphore);  // signal that ready
   delay(10);
 }
 
 
 void openSDfile(const char* streamFile) {
   // open selected file on SD for streaming
-  if (stopPlayback) LOG_WRN("Playback refused - capture in progress");
+  if (stopPlayback)
+    LOG_WRN("Playback refused - capture in progress");
   else {
-    stopPlaying(); // in case already running
+    stopPlaying();  // in case already running
     strcpy(aviFileName, streamFile);
     LOG_INF("Playing %s", aviFileName);
     playbackFile = STORAGE.open(aviFileName, FILE_READ);
-    playbackFile.seek(AVI_HEADER_LEN, SeekSet); // skip over header
+    playbackFile.seek(AVI_HEADER_LEN, SeekSet);  // skip over header
     playbackFPS(aviFileName);
-    isPlaying = true; //playback status
-    doPlayback = true; // control playback
-    readSD(); // prime playback task
+    isPlaying = true;   // playback status
+    doPlayback = true;  // control playback
+    readSD();           // prime playback task
   }
 }
 
@@ -610,13 +617,13 @@ mjpegStruct getNextFrame(bool firstCall) {
   static uint32_t hTime;
   static size_t remainingFrame;
   static size_t buffLen;
-  const uint32_t dcVal = 0x63643030; // value of 00dc marker
+  const uint32_t dcVal = 0x63643030;  // value of 00dc marker
   if (firstCall) {
     sTime = millis();
     hTime = millis();
     remainingBuff = completedPlayback = false;
     frameCnt = remainingFrame = vidSize = buffOffset = 0;
-    wTimeTot = fTimeTot = hTimeTot = tTimeTot = 1; // avoid divide by 0
+    wTimeTot = fTimeTot = hTimeTot = tTimeTot = 1;  // avoid divide by 0
   }
   LOG_VRB("http send time %lu ms", millis() - hTime);
   hTimeTot += millis() - hTime;
@@ -628,19 +635,22 @@ mjpegStruct getNextFrame(bool firstCall) {
       mTime = millis();
       // move final bytes to buffer start in case jpeg marker at end of buffer
       memcpy(iSDbuffer, iSDbuffer + RAMSIZE, CHUNK_HDR);
-      xSemaphoreTake(readSemaphore, portMAX_DELAY); // wait for read from SD card completed
+      xSemaphoreTake(readSemaphore, portMAX_DELAY);  // wait for read from SD card completed
       buffLen = readLen;
       LOG_VRB("SD wait time %lu ms", millis() - mTime);
       wTimeTot += millis() - mTime;
       mTime = millis();
       // overlap buffer by CHUNK_HDR to prevent jpeg marker being split between buffers
-      memcpy(iSDbuffer + CHUNK_HDR, iSDbuffer + RAMSIZE + CHUNK_HDR, buffLen); // load new cluster from double buffer
+      memcpy(iSDbuffer + CHUNK_HDR, iSDbuffer + RAMSIZE + CHUNK_HDR,
+             buffLen);  // load new cluster from double buffer
       LOG_VRB("memcpy took %lu ms for %u bytes", millis() - mTime, buffLen);
       fTimeTot += millis() - mTime;
       remainingBuff = true;
-      if (buffOffset > RAMSIZE) buffOffset = 4; // special case, marker overlaps end of buffer
-      else buffOffset = frameCnt ? 0 : CHUNK_HDR; // only before 1st frame
-      xTaskNotifyGive(playbackHandle); // wake up task to get next cluster - sets readLen
+      if (buffOffset > RAMSIZE)
+        buffOffset = 4;  // special case, marker overlaps end of buffer
+      else
+        buffOffset = frameCnt ? 0 : CHUNK_HDR;  // only before 1st frame
+      xTaskNotifyGive(playbackHandle);          // wake up task to get next cluster - sets readLen
     }
     mTime = millis();
     if (!remainingFrame) {
@@ -649,8 +659,8 @@ mjpegStruct getNextFrame(bool firstCall) {
       memcpy(&inVal, iSDbuffer + buffOffset, 4);
       if (inVal != dcVal) {
         // reached end of frames to stream
-        mjpegData.buffLen = buffOffset; // remainder of final jpeg
-        mjpegData.buffOffset = 0; // from start of buff
+        mjpegData.buffLen = buffOffset;  // remainder of final jpeg
+        mjpegData.buffOffset = 0;        // from start of buff
         mjpegData.jpegSize = 0;
         stopPlayback = completedPlayback = true;
         return mjpegData;
@@ -660,8 +670,8 @@ mjpegStruct getNextFrame(bool firstCall) {
         memcpy(&jpegSize, iSDbuffer + buffOffset + 4, 4);
         remainingFrame = jpegSize;
         vidSize += jpegSize;
-        buffOffset += CHUNK_HDR; // skip over marker
-        mjpegData.jpegSize = jpegSize; // signal start of jpeg to webServer
+        buffOffset += CHUNK_HDR;        // skip over marker
+        mjpegData.jpegSize = jpegSize;  // signal start of jpeg to webServer
         mTime = millis();
         // wait on playbackSemaphore for rate control
         xSemaphoreTake(playbackSemaphore, portMAX_DELAY);
@@ -670,11 +680,15 @@ mjpegStruct getNextFrame(bool firstCall) {
         frameCnt++;
         showProgress();
       }
-    } else mjpegData.jpegSize = 0; // within frame,
+    } else
+      mjpegData.jpegSize = 0;  // within frame,
     // determine amount of data to send to webServer
-    if (buffOffset > RAMSIZE) mjpegData.buffLen = 0; // special case
-    else mjpegData.buffLen = (remainingFrame > buffLen - buffOffset) ? buffLen - buffOffset : remainingFrame;
-    mjpegData.buffOffset = buffOffset; // from here
+    if (buffOffset > RAMSIZE)
+      mjpegData.buffLen = 0;  // special case
+    else
+      mjpegData.buffLen =
+          (remainingFrame > buffLen - buffOffset) ? buffLen - buffOffset : remainingFrame;
+    mjpegData.buffOffset = buffOffset;  // from here
     remainingFrame -= mjpegData.buffLen;
     buffOffset += mjpegData.buffLen;
     if (buffOffset >= buffLen) remainingBuff = false;
@@ -700,9 +714,9 @@ mjpegStruct getNextFrame(bool firstCall) {
     }
     checkMemory();
     LOG_INF("*************************************\n");
-    setFPS(saveFPS); // realign with browser
+    setFPS(saveFPS);  // realign with browser
     stopPlayback = isPlaying = false;
-    mjpegData.buffLen = mjpegData.buffOffset = 0; // signal end of jpeg
+    mjpegData.buffLen = mjpegData.buffOffset = 0;  // signal end of jpeg
   }
   hTime = millis();
   delay(1);
@@ -720,7 +734,7 @@ void stopPlaying() {
       // not yet closed, so force close
       logLine();
       LOG_WRN("Force closed playback");
-      doPlayback = false; // stop webserver playback
+      doPlayback = false;  // stop webserver playback
       setFPS(saveFPS);
       xSemaphoreGive(playbackSemaphore);
       xSemaphoreGive(readSemaphore);
@@ -745,13 +759,17 @@ static bool startSDtasks() {
   // tasks to manage SD card operation
   xTaskCreate(&playbackTask, "playbackTask", PLAYBACK_STACK_SIZE, NULL, PLAY_PRI, &playbackHandle);
   xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, CAPTURE_PRI, &captureHandle);
-  if (captureHandle == NULL || getTaskId() == NULL) {
+#if INCLUDE_ACCELEROMETER
+  if (captureHandle == NULL || getAccelerometerTaskId() == NULL) {
+#else
+  if (captureHandle == NULL) {
+#endif
     // Usually insufficient memory
     OTAprereq();
     return false;
   }
   // set initial camera framesize and FPS from configs
-  sensor_t * s = esp_camera_sensor_get();
+  sensor_t* s = esp_camera_sensor_get();
   s->set_framesize(s, (framesize_t)fsizePtr);
   setFPS(FPS);
   debugMemory("startSDtasks");
@@ -765,7 +783,7 @@ bool prepRecording() {
   aviMutex = xSemaphoreCreateMutex();
   motionSemaphore = xSemaphoreCreateBinary();
   for (int i = 0; i < vidStreams; i++) frameSemaphore[i] = xSemaphoreCreateBinary();
-  reloadConfigs(); // apply camera config
+  reloadConfigs();  // apply camera config
   if (!startSDtasks()) return false;
 #if INCLUDE_TINYML
   LOG_INF("%sUsing TinyML", mlUse ? "" : "Not ");
@@ -788,11 +806,9 @@ bool prepRecording() {
       LOG_INF("- attach PIR to pin %u", pirPin);
       LOG_INF("- raise pin %u to 3.3V", pirPin);
     }
-    if (accUse) {
-      LOG_INF("- activate accelerometer detection");
-      LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
-      // LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
-    }
+#if INCLUDE_ACCELEROMETER
+    printAccelerometerStatus();
+#endif
 #endif
     if (useMotion) LOG_INF("- move in front of camera");
   }
@@ -853,7 +869,7 @@ void OTAprereq() {
 #ifdef CAMERA_MODEL_DFRobot_FireBeetle2_ESP32S3
 // This board has a configurable power supply
 // Need to instal following library
-#include "DFRobot_AXP313A.h" // https://github.com/cdjq/DFRobot_AXP313A
+#include "DFRobot_AXP313A.h"  // https://github.com/cdjq/DFRobot_AXP313A
 DFRobot_AXP313A axp;
 
 static bool camPower() {
@@ -880,48 +896,46 @@ static bool camPower() {
 #endif
 
 static esp_err_t changeXCLK(camera_config_t config) {
-  //since the original setup doesnt create over 20MHz clock, we do it forcefully
+  // since the original setup doesnt create over 20MHz clock, we do it forcefully
   if (config.xclk_freq_hz <= 20 * OneMHz) return ESP_OK;
   esp_err_t res = ESP_OK;
   // Deinitialize the existing LEDC configuration
   ledc_stop(LEDC_LOW_SPEED_MODE, config.ledc_channel, 0);
   delay(5);
   // Configure the LEDC timer
-  ledc_timer_config_t ledc_timer = {
-    .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_1_BIT,
-    .timer_num = config.ledc_timer,
-    .freq_hz = (uint32_t)config.xclk_freq_hz,
-    .clk_cfg = LEDC_AUTO_CLK
-  };
+  ledc_timer_config_t ledc_timer = {.speed_mode = LEDC_LOW_SPEED_MODE,
+                                    .duty_resolution = LEDC_TIMER_1_BIT,
+                                    .timer_num = config.ledc_timer,
+                                    .freq_hz = (uint32_t)config.xclk_freq_hz,
+                                    .clk_cfg = LEDC_AUTO_CLK};
   res = ledc_timer_config(&ledc_timer);
   if (res != ESP_OK) {
     LOG_ERR("Failed to configure timer %s", espErrMsg(res));
     return res;
   }
   // Configure the LEDC channel
-  ledc_channel_config_t ledc_channel = {
-    .gpio_num = XCLK_GPIO_NUM,
-    .speed_mode = LEDC_LOW_SPEED_MODE,
-    .channel = config.ledc_channel,
-    .intr_type = LEDC_INTR_DISABLE,
-    .timer_sel = config.ledc_timer,
-    .duty = 1,  // 50% duty cycle for 1-bit resolution
-    .hpoint = 0
-  };
+  ledc_channel_config_t ledc_channel = {.gpio_num = XCLK_GPIO_NUM,
+                                        .speed_mode = LEDC_LOW_SPEED_MODE,
+                                        .channel = config.ledc_channel,
+                                        .intr_type = LEDC_INTR_DISABLE,
+                                        .timer_sel = config.ledc_timer,
+                                        .duty = 1,  // 50% duty cycle for 1-bit resolution
+                                        .hpoint = 0};
   res = ledc_channel_config(&ledc_channel);
   if (res != ESP_OK) {
     LOG_ERR("Failed to configure channel %s", espErrMsg(res));
     return res;
   }
-  delay(200); // base on datasheet, it needs < 300 ms for configuration to settle in. we just put 200ms. it doesnt hurt.
+  delay(200);  // base on datasheet, it needs < 300 ms for configuration to settle in. we just put
+               // 200ms. it doesnt hurt.
   return res;
 }
 
 bool prepCam() {
   // initialise camera depending on model and board
   if (FRAMESIZE_INVALID != sizeof(frameData) / sizeof(frameData[0]))
-    LOG_ERR("framesize_t entries %d != frameData entries %d", FRAMESIZE_INVALID, sizeof(frameData) / sizeof(frameData[0]));
+    LOG_ERR("framesize_t entries %d != frameData entries %d", FRAMESIZE_INVALID,
+            sizeof(frameData) / sizeof(frameData[0]));
   if (!camPower()) return false;
 #if INCLUDE_I2C
   if (shareI2C(SIOD_GPIO_NUM, SIOC_GPIO_NUM)) {
@@ -935,16 +949,21 @@ bool prepCam() {
   // buffer sizing depends on psram size (2M, 4M or 8M)
   // FRAMESIZE_QSXGA = 1MB, FRAMESIZE_UXGA = 375KB (as JPEG)
   // Omnivision camera models
-  maxFS = FRAMESIZE_SVGA; // 2M
-  if (ESP.getPsramSize() > 5 * ONEMEG) maxFS = FRAMESIZE_QSXGA; // 8M
-  else if (ESP.getPsramSize() > 3 * ONEMEG) maxFS = FRAMESIZE_UXGA; // 4M
+  maxFS = FRAMESIZE_SVGA;  // 2M
+  if (ESP.getPsramSize() > 5 * ONEMEG)
+    maxFS = FRAMESIZE_QSXGA;  // 8M
+  else if (ESP.getPsramSize() > 3 * ONEMEG)
+    maxFS = FRAMESIZE_UXGA;  // 4M
 #ifdef USE_PY260
   // PY260 camera has different frame sizes
   maxFS = (ESP.getPsramSize() > 5 * ONEMEG) ? FRAMESIZE_5MP : FRAMESIZE_HD;
 #endif
-  // define buffer size depending on maximum frame size available, esp32-camera/driver/cam_hal.c: cam_obj->recv_size
-  maxFrameBuffSize = maxAlertBuffSize = frameData[maxFS].frameWidth * frameData[maxFS].frameHeight / 5;
-  LOG_INF("Max frame size for %s PSRAM is %s ", fmtSize(ESP.getPsramSize()), frameData[maxFS].frameSizeStr);
+  // define buffer size depending on maximum frame size available, esp32-camera/driver/cam_hal.c:
+  // cam_obj->recv_size
+  maxFrameBuffSize = maxAlertBuffSize =
+      frameData[maxFS].frameWidth * frameData[maxFS].frameHeight / 5;
+  LOG_INF("Max frame size for %s PSRAM is %s ", fmtSize(ESP.getPsramSize()),
+          frameData[maxFS].frameSizeStr);
 
   // configure camera
   camera_config_t config;
@@ -974,7 +993,7 @@ bool prepCam() {
   config.frame_size = maxFS;
   config.jpeg_quality = 10;
   config.fb_count = FB_CNT;
-  config.sccb_i2c_port = 0;// using I2C 0. to be sure what port we are using.
+  config.sccb_i2c_port = 0;  // using I2C 0. to be sure what port we are using.
 
 #if defined(CAMERA_MODEL_ESP_EYE)
   pinMode(13, INPUT_PULLUP);
@@ -989,7 +1008,9 @@ bool prepCam() {
     if (err == ESP_OK) err = changeXCLK(config);
     if (err != ESP_OK) {
       // power cycle the camera, provided pin is connected
-#if (defined(PWDN_GPIO_NUM)) && (PWDN_GPIO_NUM > -1) // both checks are needed. if send -1 to digitalWrite, it can cause crash.
+#if (defined(PWDN_GPIO_NUM)) && \
+    (PWDN_GPIO_NUM >            \
+     -1)  // both checks are needed. if send -1 to digitalWrite, it can cause crash.
       digitalWrite(PWDN_GPIO_NUM, 1);
       delay(100);
       digitalWrite(PWDN_GPIO_NUM, 0);
@@ -1001,10 +1022,14 @@ bool prepCam() {
     }
   }
 
-  if (err != ESP_OK) snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Camera init error 0x%X:%s on %s", err, espErrMsg(err), CAM_BOARD);
+  if (err != ESP_OK)
+    snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Camera init error 0x%X:%s on %s", err,
+             espErrMsg(err), CAM_BOARD);
   else {
     sensor_t* s = esp_camera_sensor_get();
-    if (s == NULL) snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Failed to access camera data on %s", CAM_BOARD);
+    if (s == NULL)
+      snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Failed to access camera data on %s",
+               CAM_BOARD);
     else {
       switch (s->id.PID) {
         case (OV2640_PID):
@@ -1026,15 +1051,17 @@ bool prepCam() {
       }
       // set frame size to configured value
       char fsizePtr[4];
-      if (retrieveConfigVal("framesize", fsizePtr)) s->set_framesize(s, (framesize_t)(atoi(fsizePtr)));
-      else s->set_framesize(s, FRAMESIZE_VGA);
+      if (retrieveConfigVal("framesize", fsizePtr))
+        s->set_framesize(s, (framesize_t)(atoi(fsizePtr)));
+      else
+        s->set_framesize(s, FRAMESIZE_VGA);
 
       // model specific corrections
       if (s->id.PID == OV3660_PID) {
         // initial sensors are flipped vertically and colors are a bit saturated
-        s->set_vflip(s, 1);//flip it back
-        s->set_brightness(s, 1);//up the brightness just a bit
-        s->set_saturation(s, -2);//lower the saturation
+        s->set_vflip(s, 1);        // flip it back
+        s->set_brightness(s, 1);   // up the brightness just a bit
+        s->set_saturation(s, -2);  // lower the saturation
       }
 
 #if defined(CAMERA_MODEL_M5STACK_WIDE)
@@ -1058,7 +1085,8 @@ bool prepCam() {
     camera_fb_t* fb = esp_camera_fb_get();
     if (fb == NULL) {
       // usually a camera hardware / ribbon cable fault
-      snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Failed to get camera frame - check camera hardware");
+      snprintf(startupFailure, SF_LEN,
+               STARTUP_FAIL "Failed to get camera frame - check camera hardware");
     } else {
       esp_camera_fb_return(fb);
       fb = NULL;
@@ -1066,14 +1094,18 @@ bool prepCam() {
       LOG_INF("Camera model %s ready @ %uMHz", camModel, xclkMhz);
       if (timeLapseOn) dashCamOn = 0;
       if (dashCamOn) {
-        timeLapseOn = useMotion = false; // disable timeLapse and motion recording
-        frameLimit = FPS * dashCamOn * 60; // frameLimit is not changed if FPS later changed without restart
+        timeLapseOn = useMotion = false;  // disable timeLapse and motion recording
+        frameLimit =
+            FPS * dashCamOn * 60;  // frameLimit is not changed if FPS later changed without restart
         if (frameLimit > maxFrames) {
           frameLimit = maxFrames;
           LOG_WRN("Max continuous recording time interval is %d mins", frameLimit / FPS / 60);
-        } else LOG_INF("Do continuous recording at %d min intervals", dashCamOn);
+        } else {
+          LOG_INF("Do continuous recording at %d min intervals", dashCamOn);
+        }
         forceRecord = true;
-      } else frameLimit = maxFrames;
+      } else
+        frameLimit = maxFrames;
     }
   }
   debugMemory("prepCam");

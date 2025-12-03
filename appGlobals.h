@@ -74,7 +74,8 @@
 #define INCLUDE_MCPWM false   // mcpwm.cpp (BDC motor control). Needs INCLUDE_PERIPH true
 #define INCLUDE_RTSP false    // rtsp.cpp (RTSP Streaming). Requires additional library: ESP32-RTSPServer
 #define INCLUDE_DS18B20 false // if true, requires INCLUDE_PERIPH and additional libraries: OneWire and DallasTemperature
-#define INCLUDE_I2C false     // periphsI2C.cpp (support for I2C peripherals)
+#define INCLUDE_I2C true     // periphsI2C.cpp (support for I2C peripherals)
+#define INCLUDE_ACCELEROMETER (INCLUDE_I2C&&INCLUDE_PERIPH)     // accelerometer.cpp (support ADXL345)
 
 // if INCLUDE_I2C true, set each I2C device used to true 
 #define USE_SSD1306 false
@@ -265,7 +266,6 @@ float* getMPU9250();
 mjpegStruct getNextFrame(bool firstCall = false);
 int getInputPeripheral(uint8_t cmd);
 bool getPIRval();
-bool getAccVal();
 bool haveWavFile(bool isTL = false);
 bool identifyBMx();
 void intercom();
