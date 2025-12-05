@@ -1,25 +1,25 @@
 // mjpeg2sd app specific functions
 //
 // Direct access (HTTP) URLs for NVR:
-// - Video streaming: app_ip/sustain?video=1 
+// - Video streaming: app_ip/sustain?video=1
 // - Audio streaming: app_ip/sustain?audio=1
 // - Subtitle streaming: app_ip/sustain?srt=1
 // - Stills: app_ip/control?still=1
 //
 // s60sc 2022 - 2024
 
-#include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "appGlobals.h"
 
-static char variable[FILE_NAME_LEN]; 
+static char variable[FILE_NAME_LEN];
 static char value[FILE_NAME_LEN];
 static char alertCaption[100];
 static bool alertReady = false;
 static bool depthColor = true;
 static bool devHub = false;
 char AuxIP[MAX_IP_LEN];
-bool useUart = false; 
-int quality; // Variable to hold quality for RTSP frame
+bool useUart = false;
+int quality;  // Variable to hold quality for RTSP frame
 volatile audioAction THIS_ACTION = PASS_ACTION;
 static void stopRC();
 
@@ -27,7 +27,7 @@ static void stopRC();
 
 bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   // update vars from browser input
-  esp_err_t res = ESP_OK; 
+  esp_err_t res = ESP_OK;
 #ifndef CONFIG_IDF_TARGET_ESP32C3
   sensor_t* s = esp_camera_sensor_get();
 #endif
@@ -36,150 +36,213 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   LOG_VRB("Check in updateAppStatus: %s=%s fromUser=%d", variable, value, fromUser);
   if (!strcmp(variable, "custom")) return true;
 #ifndef AUXILIARY
-  else if (!strcmp(variable, "stopStream")) stopSustainTask(intVal);
-  else if (!strcmp(variable, "stopPlaying")) stopPlaying();
-  else if (!strcmp(variable, "minf")) minSeconds = intVal; 
-  else if (!strcmp(variable, "motionVal")) motionVal = intVal;
-  else if (!strcmp(variable, "moveStartChecks")) moveStartChecks = intVal;
-  else if (!strcmp(variable, "moveStopSecs")) moveStopSecs = intVal;
-  else if (!strcmp(variable, "maxFrames")) maxFrames = intVal > 0 ? intVal : maxFrames;
-  else if (!strcmp(variable, "detectMotionFrames")) detectMotionFrames = intVal;
-  else if (!strcmp(variable, "detectNightFrames")) detectNightFrames = intVal;
-  else if (!strcmp(variable, "detectNumBands")) detectNumBands = intVal;
-  else if (!strcmp(variable, "detectStartBand")) detectStartBand = intVal;
-  else if (!strcmp(variable, "detectEndBand")) detectEndBand = intVal;
-  else if (!strcmp(variable, "detectChangeThreshold")) detectChangeThreshold = intVal;
-  else if (!strcmp(variable, "mlUse")) mlUse = (bool)intVal;
-  else if (!strcmp(variable, "mlProbability")) mlProbability = fltVal < 0 ? 0.0 : (fltVal > 1.0 ? 1.0 : fltVal);
+  else if (!strcmp(variable, "stopStream"))
+    stopSustainTask(intVal);
+  else if (!strcmp(variable, "stopPlaying"))
+    stopPlaying();
+  else if (!strcmp(variable, "minf"))
+    minSeconds = intVal;
+  else if (!strcmp(variable, "motionVal"))
+    motionVal = intVal;
+  else if (!strcmp(variable, "moveStartChecks"))
+    moveStartChecks = intVal;
+  else if (!strcmp(variable, "moveStopSecs"))
+    moveStopSecs = intVal;
+  else if (!strcmp(variable, "maxFrames"))
+    maxFrames = intVal > 0 ? intVal : maxFrames;
+  else if (!strcmp(variable, "detectMotionFrames"))
+    detectMotionFrames = intVal;
+  else if (!strcmp(variable, "detectNightFrames"))
+    detectNightFrames = intVal;
+  else if (!strcmp(variable, "detectNumBands"))
+    detectNumBands = intVal;
+  else if (!strcmp(variable, "detectStartBand"))
+    detectStartBand = intVal;
+  else if (!strcmp(variable, "detectEndBand"))
+    detectEndBand = intVal;
+  else if (!strcmp(variable, "detectChangeThreshold"))
+    detectChangeThreshold = intVal;
+  else if (!strcmp(variable, "mlUse"))
+    mlUse = (bool)intVal;
+  else if (!strcmp(variable, "mlProbability"))
+    mlProbability = fltVal < 0 ? 0.0 : (fltVal > 1.0 ? 1.0 : fltVal);
   else if (!strcmp(variable, "depthColor")) {
     depthColor = (bool)intVal;
     colorDepth = depthColor ? RGB888_BYTES : GRAYSCALE_BYTES;
-  }
-  else if (!strcmp(variable, "enableMotion")) {
-    // Turn on/off motion detection 
-    useMotion = (intVal) ? true : false; 
+  } else if (!strcmp(variable, "enableMotion")) {
+    // Turn on/off motion detection
+    useMotion = (intVal) ? true : false;
     LOG_INF("%s motion detection", useMotion ? "Enabling" : "Disabling");
-  }
-  else if (!strcmp(variable, "timeLapseOn")) timeLapseOn = intVal;
+  } else if (!strcmp(variable, "timeLapseOn"))
+    timeLapseOn = intVal;
   else if (!strcmp(variable, "dashCamOn")) {
     dashCamOn = intVal;
     if (dashCamOn == 0) forceRecord = false;
-  }
-  else if (!strcmp(variable, "tlSecsBetweenFrames")) tlSecsBetweenFrames = intVal;
-  else if (!strcmp(variable, "tlDurationMins")) tlDurationMins = intVal;
-  else if (!strcmp(variable, "tlPlaybackFPS")) tlPlaybackFPS = intVal; 
-#if !INCLUDE_RTSP 
-  else if (!strcmp(variable, "streamVid")) streamVid = (bool)intVal; 
-  else if (!strcmp(variable, "streamAud")) streamAud = (bool)intVal; 
-  else if (!strcmp(variable, "streamSrt")) streamSrt = (bool)intVal; 
+  } else if (!strcmp(variable, "tlSecsBetweenFrames"))
+    tlSecsBetweenFrames = intVal;
+  else if (!strcmp(variable, "tlDurationMins"))
+    tlDurationMins = intVal;
+  else if (!strcmp(variable, "tlPlaybackFPS"))
+    tlPlaybackFPS = intVal;
+#if !INCLUDE_RTSP
+  else if (!strcmp(variable, "streamVid"))
+    streamVid = (bool)intVal;
+  else if (!strcmp(variable, "streamAud"))
+    streamAud = (bool)intVal;
+  else if (!strcmp(variable, "streamSrt"))
+    streamSrt = (bool)intVal;
 #endif
-  else if (!strcmp(variable, "lswitch")) nightSwitch = intVal;
+  else if (!strcmp(variable, "lswitch"))
+    nightSwitch = intVal;
 #endif
 #if INCLUDE_FTP_HFS
-  else if (!strcmp(variable, "upload")) fsStartTransfer(value); 
+  else if (!strcmp(variable, "upload"))
+    fsStartTransfer(value);
 #endif
   else if (!strcmp(variable, "delete")) {
     stopPlayback = true;
     deleteFolderOrFile(value);
-  }
-  else if (!strcmp(variable, "record")) doRecording = (intVal) ? true : false;   
-  else if (!strcmp(variable, "forceRecord")) forceRecord = (intVal) ? true : false; 
+  } else if (!strcmp(variable, "record"))
+    doRecording = (intVal) ? true : false;
+  else if (!strcmp(variable, "forceRecord"))
+    forceRecord = (intVal) ? true : false;
   else if (!strcmp(variable, "dbgMotion")) {
     // only enable show motion if motion detect enabled
     dbgMotion = (intVal && useMotion) ? true : false;
     doRecording = !dbgMotion;
-  }
-  else if (!strcmp(variable, "devHub")) devHub = (bool)intVal;   
+  } else if (!strcmp(variable, "devHub"))
+    devHub = (bool)intVal;
   // peripherals
 #if INCLUDE_PERIPH
-  else if (!strcmp(variable, "pirUse")) pirUse = (bool)intVal;
+  else if (!strcmp(variable, "pirUse"))
+    pirUse = (bool)intVal;
   // accellerometer
-  else if (!strcmp(variable, "accUse")) accUse = (bool)intVal;
   else if (!strcmp(variable, "accCS")) {
-    accCS = intVal;    
+    accCS = intVal;
     LOG_INF("activation CS on %s", getSelectionOption("accCS", accCS));
   }
   // else if (!strcmp(variable, "accINT")) accINT = intVal;
   // lamp
   else if (!strcmp(variable, "lampLevel")) {
     lampLevel = intVal;
-    if (!lampType) setLamp(lampLevel); // manual
-  }
-  else if (!strcmp(variable, "lampType")) {
+    if (!lampType) setLamp(lampLevel);  // manual
+  } else if (!strcmp(variable, "lampType")) {
     lampType = intVal;
     lampAuto = lampNight = false;
-    if (lampType == 1) lampAuto = true; // lamp activated by PIR
-    if (!lampType) setLamp(lampLevel); 
-    else setLamp(0); 
-  }
-  else if (!strcmp(variable, "relayPin")) relayPin = intVal;
-  else if (!strcmp(variable, "relayMode")) relayMode = (bool)intVal;
-  else if (!strcmp(variable, "relaySwitch")) digitalWrite(relayPin, intVal);
-  else if (!strcmp(variable, "SVactive")) SVactive = (bool)intVal;
-  else if (!strcmp(variable, "voltUse")) voltUse = (bool)intVal;
-  else if (!strcmp(variable, "pirPin")) pirPin = intVal;
-  else if (!strcmp(variable, "lampPin")) lampPin = intVal;
-  else if (!strcmp(variable, "servoPanPin")) servoPanPin = intVal;
-  else if (!strcmp(variable, "servoTiltPin")) servoTiltPin = intVal;
-  else if (!strcmp(variable, "voltPin")) voltPin = intVal;
-  else if (!strcmp(variable, "servoSteerPin")) servoSteerPin = intVal;
-  else if (!strcmp(variable, "servoDelay")) servoDelay = intVal;
-  else if (!strcmp(variable, "servoMinAngle")) servoMinAngle = intVal;
-  else if (!strcmp(variable, "servoMaxAngle")) servoMaxAngle = intVal;
-  else if (!strcmp(variable, "servoMinPulseWidth")) servoMinPulseWidth = intVal;
-  else if (!strcmp(variable, "servoMaxPulseWidth")) servoMaxPulseWidth = intVal;
-  else if (!strcmp(variable, "servoCenter")) servoCenter = intVal;
-  else if (!strcmp(variable, "voltDivider")) voltDivider = intVal;
-  else if (!strcmp(variable, "voltLow")) voltLow = fltVal;
-  else if (!strcmp(variable, "voltInterval")) voltInterval = intVal;
-  else if (!strcmp(variable, "buzzerUse")) buzzerUse = (bool)intVal;  
-  else if (!strcmp(variable, "buzzerPin")) buzzerPin = intVal; 
-  else if (!strcmp(variable, "buzzerDuration")) buzzerDuration = intVal;
-  else if (!strcmp(variable, "ds18b20Pin")) ds18b20Pin = intVal;
+    if (lampType == 1) lampAuto = true;  // lamp activated by PIR
+    if (!lampType)
+      setLamp(lampLevel);
+    else
+      setLamp(0);
+  } else if (!strcmp(variable, "relayPin"))
+    relayPin = intVal;
+  else if (!strcmp(variable, "relayMode"))
+    relayMode = (bool)intVal;
+  else if (!strcmp(variable, "relaySwitch"))
+    digitalWrite(relayPin, intVal);
+  else if (!strcmp(variable, "SVactive"))
+    SVactive = (bool)intVal;
+  else if (!strcmp(variable, "voltUse"))
+    voltUse = (bool)intVal;
+  else if (!strcmp(variable, "pirPin"))
+    pirPin = intVal;
+  else if (!strcmp(variable, "lampPin"))
+    lampPin = intVal;
+  else if (!strcmp(variable, "servoPanPin"))
+    servoPanPin = intVal;
+  else if (!strcmp(variable, "servoTiltPin"))
+    servoTiltPin = intVal;
+  else if (!strcmp(variable, "voltPin"))
+    voltPin = intVal;
+  else if (!strcmp(variable, "servoSteerPin"))
+    servoSteerPin = intVal;
+  else if (!strcmp(variable, "servoDelay"))
+    servoDelay = intVal;
+  else if (!strcmp(variable, "servoMinAngle"))
+    servoMinAngle = intVal;
+  else if (!strcmp(variable, "servoMaxAngle"))
+    servoMaxAngle = intVal;
+  else if (!strcmp(variable, "servoMinPulseWidth"))
+    servoMinPulseWidth = intVal;
+  else if (!strcmp(variable, "servoMaxPulseWidth"))
+    servoMaxPulseWidth = intVal;
+  else if (!strcmp(variable, "servoCenter"))
+    servoCenter = intVal;
+  else if (!strcmp(variable, "voltDivider"))
+    voltDivider = intVal;
+  else if (!strcmp(variable, "voltLow"))
+    voltLow = fltVal;
+  else if (!strcmp(variable, "voltInterval"))
+    voltInterval = intVal;
+  else if (!strcmp(variable, "buzzerUse"))
+    buzzerUse = (bool)intVal;
+  else if (!strcmp(variable, "buzzerPin"))
+    buzzerPin = intVal;
+  else if (!strcmp(variable, "buzzerDuration"))
+    buzzerDuration = intVal;
+  else if (!strcmp(variable, "ds18b20Pin"))
+    ds18b20Pin = intVal;
 #endif
 #if INCLUDE_I2C
-  else if (!strcmp(variable, "I2Csda")) I2Csda = intVal;
-  else if (!strcmp(variable, "I2Cscl")) I2Cscl = intVal;
+  else if (!strcmp(variable, "I2Csda"))
+    I2Csda = intVal;
+  else if (!strcmp(variable, "I2Cscl"))
+    I2Cscl = intVal;
 #endif
 #if INCLUDE_AUDIO
   else if (!strcmp(variable, "micRem")) {
     micRem = bool(intVal);
     LOG_INF("Remote mic is %s", micRem ? "On" : "Off");
     if (micRem && !ampVol) LOG_WRN("Amp volume is off");
-  }
-  else if (!strcmp(variable, "spkrRem")) {
+  } else if (!strcmp(variable, "spkrRem")) {
     spkrRem = (bool)intVal;
     LOG_INF("Remote speaker is %s", spkrRem ? "On" : "Off");
     if (spkrRem && !micGain) LOG_WRN("Mic gain is off");
-  }
-  else if (!strcmp(variable, "micGain")) micGain = intVal;
-  else if (!strcmp(variable, "micSckPin")) micSckPin = intVal;
-  else if (!strcmp(variable, "micSWsPin")) micSWsPin = intVal;
-  else if (!strcmp(variable, "micSdPin")) micSdPin = intVal;
-  else if (!strcmp(variable, "ampVol")) ampVol = intVal;
-  else if (!strcmp(variable, "mampBckIo")) mampBckIo = intVal;
-  else if (!strcmp(variable, "mampSwsIo")) mampSwsIo = intVal;
-  else if (!strcmp(variable, "mampSdIo")) mampSdIo = intVal;
-  else if (!strcmp(variable, "AudActive")) AudActive = intVal;
+  } else if (!strcmp(variable, "micGain"))
+    micGain = intVal;
+  else if (!strcmp(variable, "micSckPin"))
+    micSckPin = intVal;
+  else if (!strcmp(variable, "micSWsPin"))
+    micSWsPin = intVal;
+  else if (!strcmp(variable, "micSdPin"))
+    micSdPin = intVal;
+  else if (!strcmp(variable, "ampVol"))
+    ampVol = intVal;
+  else if (!strcmp(variable, "mampBckIo"))
+    mampBckIo = intVal;
+  else if (!strcmp(variable, "mampSwsIo"))
+    mampSwsIo = intVal;
+  else if (!strcmp(variable, "mampSdIo"))
+    mampSdIo = intVal;
+  else if (!strcmp(variable, "AudActive"))
+    AudActive = intVal;
 #endif
 #if INCLUDE_TELEM
-  else if (!strcmp(variable, "teleUse")) teleUse = (bool)intVal;
+  else if (!strcmp(variable, "teleUse"))
+    teleUse = (bool)intVal;
 #endif
-  else if (!strcmp(variable, "teleInterval")) srtInterval = intVal;
-  else if (!strcmp(variable, "wakeUse")) wakeUse = (bool)intVal;
-  else if (!strcmp(variable, "wakePin")) wakePin = intVal;
+  else if (!strcmp(variable, "teleInterval"))
+    srtInterval = intVal;
+  else if (!strcmp(variable, "wakeUse"))
+    wakeUse = (bool)intVal;
+  else if (!strcmp(variable, "wakePin"))
+    wakePin = intVal;
 #if INCLUDE_MCPWM
-  else if (!strcmp(variable, "motorRevPin")) motorRevPin = intVal;
-  else if (!strcmp(variable, "motorFwdPin")) motorFwdPin = intVal;
-  else if (!strcmp(variable, "motorRevPinR")) motorRevPinR = intVal;
+  else if (!strcmp(variable, "motorRevPin"))
+    motorRevPin = intVal;
+  else if (!strcmp(variable, "motorFwdPin"))
+    motorFwdPin = intVal;
+  else if (!strcmp(variable, "motorRevPinR"))
+    motorRevPinR = intVal;
   else if (!strcmp(variable, "motorFwdPinR")) {
     motorFwdPinR = intVal;
-    if (motorFwdPinR > 0) trackSteer = true; // use track steering if pin defined
-  }
-  else if (!strcmp(variable, "pwmFreq")) pwmFreq = intVal;
+    if (motorFwdPinR > 0) trackSteer = true;  // use track steering if pin defined
+  } else if (!strcmp(variable, "pwmFreq"))
+    pwmFreq = intVal;
 #endif
 #ifndef AUXILIARY
-  else if (!strcmp(variable, "AuxIP")) strncpy(AuxIP, value, MAX_IP_LEN-1);
+  else if (!strcmp(variable, "AuxIP"))
+    strncpy(AuxIP, value, MAX_IP_LEN - 1);
 #endif
 #if INCLUDE_PERIPH
   else if (!strcmp(variable, "RCactive")) {
@@ -191,64 +254,101 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
 #if INCLUDE_MCPWM
     useBDC = (useUart && !aux) ? false : (bool)intVal;
 #endif
-  }
-  else if (!strcmp(variable, "heartbeatRC")) heartbeatRC = intVal;
-  else if (!strcmp(variable, "maxSteerAngle")) maxSteerAngle = intVal;  
-  else if (!strcmp(variable, "maxDutyCycle")) maxDutyCycle = intVal;  
-  else if (!strcmp(variable, "minDutyCycle")) minDutyCycle = intVal;  
-  else if (!strcmp(variable, "maxTurnSpeed")) maxTurnSpeed = intVal;  
-  else if (!strcmp(variable, "allowReverse")) allowReverse = (bool)intVal;   
-  else if (!strcmp(variable, "autoControl")) autoControl = (bool)intVal; 
-  else if (!strcmp(variable, "waitTime")) waitTime = intVal;    
-  else if (!strcmp(variable, "lightsRCpin")) lightsRCpin = intVal;
-  else if (!strcmp(variable, "stickUse")) stickUse = (bool)intVal; 
-  else if (!strcmp(variable, "stickXpin")) stickXpin = intVal; 
-  else if (!strcmp(variable, "stickYpin")) stickYpin = intVal; 
-  else if (!strcmp(variable, "stickzPushPin")) stickzPushPin = intVal; 
+  } else if (!strcmp(variable, "heartbeatRC"))
+    heartbeatRC = intVal;
+  else if (!strcmp(variable, "maxSteerAngle"))
+    maxSteerAngle = intVal;
+  else if (!strcmp(variable, "maxDutyCycle"))
+    maxDutyCycle = intVal;
+  else if (!strcmp(variable, "minDutyCycle"))
+    minDutyCycle = intVal;
+  else if (!strcmp(variable, "maxTurnSpeed"))
+    maxTurnSpeed = intVal;
+  else if (!strcmp(variable, "allowReverse"))
+    allowReverse = (bool)intVal;
+  else if (!strcmp(variable, "autoControl"))
+    autoControl = (bool)intVal;
+  else if (!strcmp(variable, "waitTime"))
+    waitTime = intVal;
+  else if (!strcmp(variable, "lightsRCpin"))
+    lightsRCpin = intVal;
+  else if (!strcmp(variable, "stickUse"))
+    stickUse = (bool)intVal;
+  else if (!strcmp(variable, "stickXpin"))
+    stickXpin = intVal;
+  else if (!strcmp(variable, "stickYpin"))
+    stickYpin = intVal;
+  else if (!strcmp(variable, "stickzPushPin"))
+    stickzPushPin = intVal;
 #endif
 #if (INCLUDE_PGRAM && INCLUDE_PERIPH)
-  else if (!strcmp(variable, "stepIN1pin")) setStepperPin((uint8_t)intVal, 0);
-  else if (!strcmp(variable, "stepIN2pin")) setStepperPin((uint8_t)intVal, 1);
-  else if (!strcmp(variable, "stepIN3pin")) setStepperPin((uint8_t)intVal, 2);
-  else if (!strcmp(variable, "stepIN4pin")) setStepperPin((uint8_t)intVal, 3);
+  else if (!strcmp(variable, "stepIN1pin"))
+    setStepperPin((uint8_t)intVal, 0);
+  else if (!strcmp(variable, "stepIN2pin"))
+    setStepperPin((uint8_t)intVal, 1);
+  else if (!strcmp(variable, "stepIN3pin"))
+    setStepperPin((uint8_t)intVal, 2);
+  else if (!strcmp(variable, "stepIN4pin"))
+    setStepperPin((uint8_t)intVal, 3);
   else if (!strcmp(variable, "PGactive")) {
     PGactive = stepperUse = (bool)intVal;
     if (PGactive) setLamp(0);
-  }
-  else if (!strcmp(variable, "numberOfPhotos")) numberOfPhotos = intVal;
-  else if (!strcmp(variable, "gearing")) gearing = fltVal;
-  else if (!strcmp(variable, "RPM")) tRPM = intVal;
-  else if (!strcmp(variable, "clockwise")) clockWise = (bool)intVal;
-  else if (!strcmp(variable, "timeForPhoto")) timeForPhoto = intVal;
-  else if (!strcmp(variable, "timeForFocus")) timeForFocus = intVal;
-  else if (!strcmp(variable, "pinShutter")) pinShutter = intVal;
-  else if (!strcmp(variable, "pinFocus")) pinFocus = intVal;
-  else if (!strcmp(variable, "extCam")) extCam = (bool)intVal;
+  } else if (!strcmp(variable, "numberOfPhotos"))
+    numberOfPhotos = intVal;
+  else if (!strcmp(variable, "gearing"))
+    gearing = fltVal;
+  else if (!strcmp(variable, "RPM"))
+    tRPM = intVal;
+  else if (!strcmp(variable, "clockwise"))
+    clockWise = (bool)intVal;
+  else if (!strcmp(variable, "timeForPhoto"))
+    timeForPhoto = intVal;
+  else if (!strcmp(variable, "timeForFocus"))
+    timeForFocus = intVal;
+  else if (!strcmp(variable, "pinShutter"))
+    pinShutter = intVal;
+  else if (!strcmp(variable, "pinFocus"))
+    pinFocus = intVal;
+  else if (!strcmp(variable, "extCam"))
+    extCam = (bool)intVal;
 #endif
 
 #if INCLUDE_EXTHB
   // External Heartbeat
-  else if (!strcmp(variable, "external_heartbeat_active")) external_heartbeat_active = (bool)intVal;
-  else if (!strcmp(variable, "external_heartbeat_domain")) snprintf(external_heartbeat_domain, MAX_HOST_LEN, "%s", value);
-  else if (!strcmp(variable, "external_heartbeat_uri")) snprintf(external_heartbeat_uri, FILE_NAME_LEN, "%s", value);
-  else if (!strcmp(variable, "external_heartbeat_port")) external_heartbeat_port = intVal;
-  else if (!strcmp(variable, "external_heartbeat_token")) snprintf(external_heartbeat_token, MAX_HOST_LEN, "%s", value);
+  else if (!strcmp(variable, "external_heartbeat_active"))
+    external_heartbeat_active = (bool)intVal;
+  else if (!strcmp(variable, "external_heartbeat_domain"))
+    snprintf(external_heartbeat_domain, MAX_HOST_LEN, "%s", value);
+  else if (!strcmp(variable, "external_heartbeat_uri"))
+    snprintf(external_heartbeat_uri, FILE_NAME_LEN, "%s", value);
+  else if (!strcmp(variable, "external_heartbeat_port"))
+    external_heartbeat_port = intVal;
+  else if (!strcmp(variable, "external_heartbeat_token"))
+    snprintf(external_heartbeat_token, MAX_HOST_LEN, "%s", value);
 #endif
 
-  else if (!strcmp(variable, "useUart")) useUart = (bool)intVal;
+  else if (!strcmp(variable, "useUart"))
+    useUart = (bool)intVal;
 #if INCLUDE_UART
-  else if (!strcmp(variable, "uartTxdPin")) uartTxdPin = intVal;
-  else if (!strcmp(variable, "uartRxdPin")) uartRxdPin = intVal;
+  else if (!strcmp(variable, "uartTxdPin"))
+    uartTxdPin = intVal;
+  else if (!strcmp(variable, "uartRxdPin"))
+    uartRxdPin = intVal;
 #endif
 
 #ifndef AUXILIARY
   // camera settings
-  else if (!strcmp(variable, "xclkMhz")) xclkMhz = intVal;
+  else if (!strcmp(variable, "xclkMhz"))
+    xclkMhz = intVal;
   else if (!strcmp(variable, "framesize")) {
-    if (intVal > maxFS && fromUser) LOG_WRN("Frame size %s too large for %s PSRAM ", frameData[intVal].frameSizeStr, fmtSize(ESP.getPsramSize()));
+    if (intVal > maxFS && fromUser)
+      LOG_WRN("Frame size %s too large for %s PSRAM ", frameData[intVal].frameSizeStr,
+              fmtSize(ESP.getPsramSize()));
     else {
       fsizePtr = intVal;
-      if (fsizePtr > FRAMESIZE_SXGA) LOG_WRN("Motion detection not available as frame size %s too large", frameData[fsizePtr].frameSizeStr);
+      if (fsizePtr > FRAMESIZE_SXGA)
+        LOG_WRN("Motion detection not available as frame size %s too large",
+                frameData[fsizePtr].frameSizeStr);
 
       if (s) {
         res = s->set_framesize(s, (framesize_t)fsizePtr);
@@ -256,82 +356,107 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
           // update default FPS for this frame size
           if (playbackHandle != NULL) {
             setFPSlookup(fsizePtr);
-            updateConfigVect("fps", String(FPS).c_str()); 
+            updateConfigVect("fps", String(FPS).c_str());
           }
         }
       }
     }
-  }
-  else if (!strcmp(variable, "fps")) {
+  } else if (!strcmp(variable, "fps")) {
     FPS = intVal;
     if (playbackHandle != NULL) setFPS(FPS);
-  }
-  else if (s) {
+  } else if (s) {
     if (!strcmp(variable, "quality")) {
       res = s->set_quality(s, intVal);
       if (res == ESP_OK) quality = intVal;
-    }
-    else if (!strcmp(variable, "contrast")) res = s->set_contrast(s, intVal);
-    else if (!strcmp(variable, "brightness")) res = s->set_brightness(s, intVal);
-    else if (!strcmp(variable, "saturation")) res = s->set_saturation(s, intVal);
-    else if (!strcmp(variable, "denoise")) res = s->set_denoise(s, intVal);    
-    else if (!strcmp(variable, "sharpness")) res = s->set_sharpness(s, intVal);    
-    else if (!strcmp(variable, "gainceiling")) res = s->set_gainceiling(s, (gainceiling_t)intVal);
-    else if (!strcmp(variable, "colorbar")) res = s->set_colorbar(s, intVal);
-    else if (!strcmp(variable, "awb")) res = s->set_whitebal(s, intVal);
-    else if (!strcmp(variable, "agc")) res = s->set_gain_ctrl(s, intVal);
-    else if (!strcmp(variable, "aec")) res = s->set_exposure_ctrl(s, intVal);
-    else if (!strcmp(variable, "hmirror")) res = s->set_hmirror(s, intVal);
-    else if (!strcmp(variable, "vflip")) res = s->set_vflip(s, intVal);
-    else if (!strcmp(variable, "awb_gain")) res = s->set_awb_gain(s, intVal);
-    else if (!strcmp(variable, "agc_gain")) res = s->set_agc_gain(s, intVal);
-    else if (!strcmp(variable, "aec_value")) res = s->set_aec_value(s, intVal);
-    else if (!strcmp(variable, "aec2")) res = s->set_aec2(s, intVal);
-    else if (!strcmp(variable, "dcw")) res = s->set_dcw(s, intVal);
-    else if (!strcmp(variable, "bpc")) res = s->set_bpc(s, intVal);
-    else if (!strcmp(variable, "wpc")) res = s->set_wpc(s, intVal);
-    else if (!strcmp(variable, "raw_gma")) res = s->set_raw_gma(s, intVal);
-    else if (!strcmp(variable, "lenc")) res = s->set_lenc(s, intVal);
-    else if (!strcmp(variable, "special_effect")) res = s->set_special_effect(s, intVal);
-    else if (!strcmp(variable, "wb_mode")) res = s->set_wb_mode(s, intVal);
-    else if (!strcmp(variable, "ae_level")) res = s->set_ae_level(s, intVal);
-    else return false;
+    } else if (!strcmp(variable, "contrast"))
+      res = s->set_contrast(s, intVal);
+    else if (!strcmp(variable, "brightness"))
+      res = s->set_brightness(s, intVal);
+    else if (!strcmp(variable, "saturation"))
+      res = s->set_saturation(s, intVal);
+    else if (!strcmp(variable, "denoise"))
+      res = s->set_denoise(s, intVal);
+    else if (!strcmp(variable, "sharpness"))
+      res = s->set_sharpness(s, intVal);
+    else if (!strcmp(variable, "gainceiling"))
+      res = s->set_gainceiling(s, (gainceiling_t)intVal);
+    else if (!strcmp(variable, "colorbar"))
+      res = s->set_colorbar(s, intVal);
+    else if (!strcmp(variable, "awb"))
+      res = s->set_whitebal(s, intVal);
+    else if (!strcmp(variable, "agc"))
+      res = s->set_gain_ctrl(s, intVal);
+    else if (!strcmp(variable, "aec"))
+      res = s->set_exposure_ctrl(s, intVal);
+    else if (!strcmp(variable, "hmirror"))
+      res = s->set_hmirror(s, intVal);
+    else if (!strcmp(variable, "vflip"))
+      res = s->set_vflip(s, intVal);
+    else if (!strcmp(variable, "awb_gain"))
+      res = s->set_awb_gain(s, intVal);
+    else if (!strcmp(variable, "agc_gain"))
+      res = s->set_agc_gain(s, intVal);
+    else if (!strcmp(variable, "aec_value"))
+      res = s->set_aec_value(s, intVal);
+    else if (!strcmp(variable, "aec2"))
+      res = s->set_aec2(s, intVal);
+    else if (!strcmp(variable, "dcw"))
+      res = s->set_dcw(s, intVal);
+    else if (!strcmp(variable, "bpc"))
+      res = s->set_bpc(s, intVal);
+    else if (!strcmp(variable, "wpc"))
+      res = s->set_wpc(s, intVal);
+    else if (!strcmp(variable, "raw_gma"))
+      res = s->set_raw_gma(s, intVal);
+    else if (!strcmp(variable, "lenc"))
+      res = s->set_lenc(s, intVal);
+    else if (!strcmp(variable, "special_effect"))
+      res = s->set_special_effect(s, intVal);
+    else if (!strcmp(variable, "wb_mode"))
+      res = s->set_wb_mode(s, intVal);
+    else if (!strcmp(variable, "ae_level"))
+      res = s->set_ae_level(s, intVal);
+    else
+      return false;
   }
 #endif
-  else return false;
-  if (res != ESP_OK && fromUser) LOG_WRN("Value %d for setting %s not supported for camera type %s", intVal, variable, camModel);
+  else
+    return false;
+  if (res != ESP_OK && fromUser)
+    LOG_WRN("Value %d for setting %s not supported for camera type %s", intVal, variable, camModel);
   return true;
 }
 
 static bool extractKeyVal(const char* wsMsg) {
-  // extract key 
-  strncpy(variable, wsMsg, FILE_NAME_LEN - 1); 
+  // extract key
+  strncpy(variable, wsMsg, FILE_NAME_LEN - 1);
   char* endPtr = strchr(variable, '=');
   if (endPtr != NULL) {
-    *endPtr = 0; // split variable into 2 strings, first is key name
-    strcpy(value, variable + strlen(variable) + 1); // value is now second part of string
+    *endPtr = 0;  // split variable into 2 strings, first is key name
+    strcpy(value, variable + strlen(variable) + 1);  // value is now second part of string
     return true;
-  } else LOG_ERR("Invalid query string: %s", wsMsg);
+  } else
+    LOG_ERR("Invalid query string: %s", wsMsg);
   return false;
-} 
+}
 
-esp_err_t appSpecificWebHandler(httpd_req_t *req, const char* variable, const char* value) {
+esp_err_t appSpecificWebHandler(httpd_req_t* req, const char* variable, const char* value) {
   // update handling requiring response specific to mjpeg2sd
   if (!strcmp(variable, "sfile")) {
     // get folders / files on SD, save received filename if has required extension
     strcpy(inFileName, value);
-    if (!forceRecord) doPlayback = listDir(inFileName, jsonBuff, JSON_BUFF_LEN, AVI_EXT); // browser control
-    else strcpy(jsonBuff, "{}");
+    if (!forceRecord)
+      doPlayback = listDir(inFileName, jsonBuff, JSON_BUFF_LEN, AVI_EXT);  // browser control
+    else
+      strcpy(jsonBuff, "{}");
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, jsonBuff);
-  } 
-  else if (!strcmp(variable, "updateFPS")) {
+  } else if (!strcmp(variable, "updateFPS")) {
     // requires response with updated default fps
     sprintf(jsonBuff, "{\"fps\":\"%u\"}", setFPSlookup(fsizePtr));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, jsonBuff);
-  } 
-  else if (!strcmp(variable, "still")) {
+  } else if (!strcmp(variable, "still")) {
     // send single jpeg to browser
     uint32_t startTime = millis();
     doKeepFrame = true;
@@ -339,31 +464,30 @@ esp_err_t appSpecificWebHandler(httpd_req_t *req, const char* variable, const ch
     if (!doKeepFrame && alertBufferSize) {
       httpd_resp_set_type(req, "image/jpeg");
       httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
-      httpd_resp_send(req, (const char*)alertBuffer, alertBufferSize);   
+      httpd_resp_send(req, (const char*)alertBuffer, alertBufferSize);
       uint32_t jpegTime = millis() - startTime;
       LOG_INF("JPEG: %uB in %ums", alertBufferSize, jpegTime);
       alertBufferSize = 0;
-    } else LOG_WRN("Failed to get still");
-  } 
-  else if (!strcmp(variable, "svg")) {
+    } else
+      LOG_WRN("Failed to get still");
+  } else if (!strcmp(variable, "svg")) {
     // build svg image for use by another app's hub instead of image
     const char* svgHtml = R"~(
         <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
           <rect width="100%" height="100%" fill="lightgray"/>
           <text x="50%" y="50%" text-anchor="middle" alignment-baseline="middle" font-size="30">
     )~";
-    
+
     httpd_resp_set_type(req, "image/svg+xml");
     httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.svg");
     httpd_resp_sendstr_chunk(req, svgHtml);
     httpd_resp_sendstr_chunk(req, "MJPE2SD");
     httpd_resp_sendstr_chunk(req, "°C</text></svg>");
     httpd_resp_sendstr_chunk(req, NULL);
-  } 
-  else if (!strcmp(variable, "formatSD")) {
+  } else if (!strcmp(variable, "formatSD")) {
     if (formatSDcard()) doRestart("user requested format of SD card");
-  } 
-  else return ESP_FAIL;
+  } else
+    return ESP_FAIL;
   return ESP_OK;
 }
 
@@ -371,47 +495,51 @@ static bool setPeripheral(char cmd, int controlVal, bool fromUart) {
   bool res = true;
   switch (cmd) {
 #if INCLUDE_MCPWM
-    case 'M': 
+    case 'M':
       // motor speed
-      if (trackSteer) trackSteeering(controlVal, false);
-      else motorSpeed(controlVal); 
-    break;
+      if (trackSteer)
+        trackSteeering(controlVal, false);
+      else
+        motorSpeed(controlVal);
+      break;
     case 'D':
       // steering
-      if (trackSteer) trackSteeering(controlVal, true);
-      else setSteering(controlVal);
-    break;
+      if (trackSteer)
+        trackSteeering(controlVal, true);
+      else
+        setSteering(controlVal);
+      break;
 #endif
 #if INCLUDE_PERIPH
     case 'L':
       // lights
       setLightsRC((bool)controlVal);
-    break;
+      break;
     case 'P':
       // camera pan servo
       setCamPan(controlVal);
-    break;
+      break;
     case 'T':
       // camera tilt servo
       setCamTilt(controlVal);
-    break;
+      break;
 #endif
 #if INCLUDE_PGRAM
     case 'G':
       // photogrammetry control
       takePhotos(bool(controlVal));
-    break;
+      break;
 #endif
-    case 'K': 
+    case 'K':
       // cam browser conn closed
 #ifdef AUXILIARY
-      if (fromUart) 
+      if (fromUart)
 #endif
         stopRC();
-    break;
+      break;
     default:
       res = false;
-    break;
+      break;
   }
   return res;
 }
@@ -420,15 +548,16 @@ void appSpecificWsHandler(const char* wsMsg) {
   // message from web socket
   int wsLen = strlen(wsMsg) - 1;
   char cmd = (char)wsMsg[0];
-  int controlVal = atoi(wsMsg + 1); // skip first char
+  int controlVal = atoi(wsMsg + 1);  // skip first char
   bool aux = false;
 #ifdef AUXILIARY
   aux = true;
 #endif
   if (useUart && !aux) {
-#if INCLUDE_UART 
+#if INCLUDE_UART
     // send command over uart to auxiliary
-    if (!writeUart(cmd, (uint32_t)controlVal)) LOG_WRN("Failed to send data to Auxiliary over UART");
+    if (!writeUart(cmd, (uint32_t)controlVal))
+      LOG_WRN("Failed to send data to Auxiliary over UART");
 #endif
   } else {
     if (!setPeripheral(cmd, controlVal, false)) {
@@ -438,32 +567,32 @@ void appSpecificWsHandler(const char* wsMsg) {
           // stop remote mic stream
           stopAudio = true;
 #endif
-        break;
-        case 'C': 
+          break;
+        case 'C':
           // control request
           if (extractKeyVal(wsMsg + 1)) updateStatus(variable, value);
-        break;
-        case 'S': 
+          break;
+        case 'S':
           // status request
-          buildJsonString(wsLen); // required config number 
+          buildJsonString(wsLen);  // required config number
           logPrint("%s\n", jsonBuff);
-        break;   
-        case 'U': 
+          break;
+        case 'U':
           // update or control request
-          memcpy(jsonBuff, wsMsg + 1, wsLen); // remove 'U'
+          memcpy(jsonBuff, wsMsg + 1, wsLen);  // remove 'U'
           parseJson(wsLen);
-        break;
-        case 'H': 
+          break;
+        case 'H':
           // browser keepalive heartbeat
           heartBeatDone = true;
-        break;
-        case 'K': 
+          break;
+        case 'K':
           // kill websocket connection
           killSocket();
-        break;
+          break;
         default:
           LOG_WRN("unknown command %s", wsMsg);
-        break;
+          break;
       }
     }
   }
@@ -481,68 +610,78 @@ void buildAppJsonString(bool filter) {
   p += sprintf(p, "\"llevel\":%u,", lightLevel);
   p += sprintf(p, "\"night\":%s,", nightTime ? "\"Yes\"" : "\"No\"");
   float aTemp = readTemperature(true);
-  if (aTemp > -127.0) p += sprintf(p, "\"atemp\":\"%0.1f\",", aTemp);
-  else p += sprintf(p, "\"atemp\":\"n/a\",");
+  if (aTemp > -127.0)
+    p += sprintf(p, "\"atemp\":\"%0.1f\",", aTemp);
+  else
+    p += sprintf(p, "\"atemp\":\"n/a\",");
   float currentVoltage = readVoltage();
-  if (currentVoltage < 0) p += sprintf(p, "\"battv\":\"n/a\",");
-  else p += sprintf(p, "\"battv\":\"%0.1fV\",", currentVoltage); 
+  if (currentVoltage < 0)
+    p += sprintf(p, "\"battv\":\"n/a\",");
+  else
+    p += sprintf(p, "\"battv\":\"%0.1fV\",", currentVoltage);
   if (forcePlayback && !doPlayback) {
-    // switch off playback 
+    // switch off playback
     forcePlayback = false;
-    p += sprintf(p, "\"forcePlayback\":0,");  
+    p += sprintf(p, "\"forcePlayback\":0,");
   }
   p += sprintf(p, "\"showRecord\":%u,", (uint8_t)((isCapturing && doRecording) || forceRecord));
   p += sprintf(p, "\"camModel\":\"%s\",", camModel);
 #if INCLUDE_PERIPH
-  p += sprintf(p, "\"SVactive\":\"%d\",", SVactive); 
- #if INCLUDE_AUDIO
-  p += sprintf(p, "\"AudActive\":\"%d\",", AudActive); 
- #endif
- #if (INCLUDE_PGRAM)
-  p += sprintf(p, "\"PGactive\":\"%d\",", PGactive); 
- #endif
+  p += sprintf(p, "\"SVactive\":\"%d\",", SVactive);
+#if INCLUDE_AUDIO
+  p += sprintf(p, "\"AudActive\":\"%d\",", AudActive);
+#endif
+#if (INCLUDE_PGRAM)
+  p += sprintf(p, "\"PGactive\":\"%d\",", PGactive);
+#endif
 #endif
 #if INCLUDE_MCPWM
-  p += sprintf(p, "\"maxSteerAngle\":\"%d\",", maxSteerAngle); 
+  p += sprintf(p, "\"maxSteerAngle\":\"%d\",", maxSteerAngle);
   p += sprintf(p, "\"maxDutyCycle\":\"%d\",", maxDutyCycle);
-  p += sprintf(p, "\"minDutyCycle\":\"%d\",", minDutyCycle);  
-  p += sprintf(p, "\"allowReverse\":\"%d\",", allowReverse);   
+  p += sprintf(p, "\"minDutyCycle\":\"%d\",", minDutyCycle);
+  p += sprintf(p, "\"allowReverse\":\"%d\",", allowReverse);
   p += sprintf(p, "\"autoControl\":\"%d\",", autoControl);
-  p += sprintf(p, "\"waitTime\":\"%d\",", waitTime); 
-  p += sprintf(p, "\"RCactive\":\"%d\",", RCactive); 
-  p += sprintf(p, "\"maxSteerAngle\":\"%d\",", maxSteerAngle); 
+  p += sprintf(p, "\"waitTime\":\"%d\",", waitTime);
+  p += sprintf(p, "\"RCactive\":\"%d\",", RCactive);
+  p += sprintf(p, "\"maxSteerAngle\":\"%d\",", maxSteerAngle);
   p += sprintf(p, "\"maxDutyCycle\":\"%d\",", maxDutyCycle);
-  p += sprintf(p, "\"minDutyCycle\":\"%d\",", minDutyCycle);  
-  p += sprintf(p, "\"allowReverse\":\"%d\",", allowReverse);   
+  p += sprintf(p, "\"minDutyCycle\":\"%d\",", minDutyCycle);
+  p += sprintf(p, "\"allowReverse\":\"%d\",", allowReverse);
   p += sprintf(p, "\"autoControl\":\"%d\",", autoControl);
-  p += sprintf(p, "\"waitTime\":\"%d\",", waitTime); 
-  p += sprintf(p, "\"heartbeatRC\":\"%d\",", heartbeatRC); 
+  p += sprintf(p, "\"waitTime\":\"%d\",", waitTime);
+  p += sprintf(p, "\"heartbeatRC\":\"%d\",", heartbeatRC);
 #endif
-  p += sprintf(p, "\"sustainId\":\"%u\",", sustainId);     
+  p += sprintf(p, "\"sustainId\":\"%u\",", sustainId);
   // Extend info
 #ifndef CONFIG_IDF_TARGET_ESP32C3
-  uint8_t cardType = 99; // not MMC
+  uint8_t cardType = 99;  // not MMC
   if ((fs::SDMMCFS*)&STORAGE == &SD_MMC) cardType = SD_MMC.cardType();
-  if (cardType == CARD_NONE) p += sprintf(p, "\"card\":\"%s\",", "NO card");
+  if (cardType == CARD_NONE)
+    p += sprintf(p, "\"card\":\"%s\",", "NO card");
   else {
     if (!filter) {
-      if (cardType == CARD_MMC) p += sprintf(p, "\"card\":\"%s\",", "MMC"); 
-      else if (cardType == CARD_SD) p += sprintf(p, "\"card\":\"%s\",", "SDSC");
-      else if (cardType == CARD_SDHC) p += sprintf(p, "\"card\":\"%s\",", "SDHC"); 
-      else if (cardType == 99) p += sprintf(p, "\"card\":\"%s\",", "LittleFS"); 
+      if (cardType == CARD_MMC)
+        p += sprintf(p, "\"card\":\"%s\",", "MMC");
+      else if (cardType == CARD_SD)
+        p += sprintf(p, "\"card\":\"%s\",", "SDSC");
+      else if (cardType == CARD_SDHC)
+        p += sprintf(p, "\"card\":\"%s\",", "SDHC");
+      else if (cardType == 99)
+        p += sprintf(p, "\"card\":\"%s\",", "LittleFS");
     }
-    if ((fs::SDMMCFS*)&STORAGE == &SD_MMC) p += sprintf(p, "\"card_size\":\"%s\",", fmtSize(SD_MMC.cardSize()));
+    if ((fs::SDMMCFS*)&STORAGE == &SD_MMC)
+      p += sprintf(p, "\"card_size\":\"%s\",", fmtSize(SD_MMC.cardSize()));
     p += sprintf(p, "\"used_bytes\":\"%s\",", fmtSize(STORAGE.usedBytes()));
     p += sprintf(p, "\"free_bytes\":\"%s\",", fmtSize(STORAGE.totalBytes() - STORAGE.usedBytes()));
     p += sprintf(p, "\"total_bytes\":\"%s\",", fmtSize(STORAGE.totalBytes()));
   }
-  p += sprintf(p, "\"free_psram\":\"%s\",", fmtSize(ESP.getFreePsram()));     
+  p += sprintf(p, "\"free_psram\":\"%s\",", fmtSize(ESP.getFreePsram()));
 #endif
 #if INCLUDE_FTP_HFS
-  p += sprintf(p, "\"progressBar\":%d,", percentLoaded);  
+  p += sprintf(p, "\"progressBar\":%d,", percentLoaded);
   if (percentLoaded == 100) percentLoaded = 0;
 #endif
-  //p += sprintf(p, "\"vcc\":\"%i V\",", ESP.getVcc() / 1023.0F; ); 
+  // p += sprintf(p, "\"vcc\":\"%i V\",", ESP.getVcc() / 1023.0F; );
   *p = 0;
 }
 
@@ -558,14 +697,12 @@ void externalAlert(const char* subject, const char* message) {
 #endif
 }
 
-void displayAudioLed(int16_t audioSample) {
-}
+void displayAudioLed(int16_t audioSample) {}
 
-void setupAudioLed() {
-}
+void setupAudioLed() {}
 
 int8_t checkPotVol(int8_t adjVol) {
-  return adjVol; // dummy
+  return adjVol;  // dummy
 }
 
 void applyFilters() {
@@ -584,7 +721,7 @@ float readTemperature(bool isCelsius, bool onlyDS18) {
 void setInputPeripheral(uint8_t cmd, uint32_t controlVal) {
   // set data on client for data received from auxiliary input peripheral
   // not used
-  //if ((char)cmd == 'I') memcpy(&pirVal, &controlVal, sizeof(pirVal));  // set PIR status
+  // if ((char)cmd == 'I') memcpy(&pirVal, &controlVal, sizeof(pirVal));  // set PIR status
 }
 
 int getInputPeripheral(uint8_t cmd) {
@@ -592,9 +729,9 @@ int getInputPeripheral(uint8_t cmd) {
   // not used
   uint32_t inputVal = -1;
   if ((char)cmd == 'I') {
-     // get PIR status
+    // get PIR status
     bool pirVal = getPIRval();
-    memcpy(&inputVal, &pirVal, sizeof(pirVal)); 
+    memcpy(&inputVal, &pirVal, sizeof(pirVal));
   }
   return inputVal;
 }
@@ -607,7 +744,7 @@ bool setOutputPeripheral(uint8_t cmd, uint32_t rxValue) {
 }
 
 bool appDataFiles() {
-  // callback from setupAssist.cpp, for any app specific files 
+  // callback from setupAssist.cpp, for any app specific files
   return true;
 }
 
@@ -627,9 +764,9 @@ void currentStackUsage() {
   // 7: pingtask
   checkStackUse(playbackHandle, 8);
 #if INCLUDE_PERIPH
- #if INCLUDE_DS18B20
+#if INCLUDE_DS18B20
   checkStackUse(DS18B20handle, 1);
- #endif
+#endif
   checkStackUse(servoHandle, 9);
   checkStackUse(stickHandle, 10);
   checkStackUse(heartBeatHandle, 14);
@@ -645,7 +782,7 @@ void currentStackUsage() {
   checkStackUse(uartRxHandle, 13);
 #endif
   // 16: http webserver
-  for (int i=0; i < numStreams; i++) checkStackUse(sustainHandle[i], 17 + i);
+  for (int i = 0; i < numStreams; i++) checkStackUse(sustainHandle[i], 17 + i);
 }
 
 static void stopRC() {
@@ -655,27 +792,28 @@ static void stopRC() {
 #endif
 #if INCLUDE_MCPWM
   if (motorFwdPin > 0) motorSpeed(0, true);
-  if (motorFwdPinR > 0) motorSpeed(0, false); 
+  if (motorFwdPinR > 0) motorSpeed(0, false);
 #endif
 }
 
 #if INCLUDE_PERIPH
-static void heartBeatTask (void *pvParameter) {
+static void heartBeatTask(void* pvParameter) {
   // check on aux that ws and / or uart connection available
   while (true) {
-    delay((heartbeatRC + 1) * 1000); // 1 sec more than browser heartbeat rate
-    if (!heartBeatDone) stopRC(); // stop RC as no heartbeat received
+    delay((heartbeatRC + 1) * 1000);  // 1 sec more than browser heartbeat rate
+    if (!heartBeatDone) stopRC();     // stop RC as no heartbeat received
     heartBeatDone = false;
   }
 }
- 
+
 void startHeartbeat() {
   // start heartbeat to check websocket and / or uart connectivity for RC control
   if (RCactive || useUart) {
-    if (heartBeatHandle == NULL) xTaskCreate(&heartBeatTask, "heartBeatTask", HB_STACK_SIZE, NULL, HB_PRI, &heartBeatHandle);
+    if (heartBeatHandle == NULL)
+      xTaskCreate(&heartBeatTask, "heartBeatTask", HB_STACK_SIZE, NULL, HB_PRI, &heartBeatHandle);
   }
 }
-#endif 
+#endif
 
 void doAppPing() {
   if (DEBUG_MEM) {
@@ -697,7 +835,7 @@ void doAppPing() {
   if (external_heartbeat_active) sendExternalHeartbeat();
 #endif
 #if INCLUDE_PERIPH
-    static bool atNight = false;
+  static bool atNight = false;
 #endif
   // check for night time actions
   if (isNight(nightSwitch)) {
@@ -707,7 +845,7 @@ void doAppPing() {
       // but may need to add external pull down between pin
       // and GND to alter required light level for wakeup
 #ifndef AUXILIARY
-      digitalWrite(PWDN_GPIO_NUM, 1); // power down camera
+      digitalWrite(PWDN_GPIO_NUM, 1);  // power down camera
 #endif
       goToSleep(wakePin, true);
     }
@@ -715,12 +853,12 @@ void doAppPing() {
     if (relayPin && relayMode && !atNight) {
       // turn on relay at night
       digitalWrite(relayPin, HIGH);
-      atNight = true; 
+      atNight = true;
     }
   } else if (relayPin && relayMode && atNight) {
     // turn off relay if day
-    digitalWrite(relayPin, LOW); 
-    atNight = false; 
+    digitalWrite(relayPin, LOW);
+    atNight = false;
 #endif
   }
 }
@@ -729,29 +867,32 @@ void doAppPing() {
 
 void tgramAlert(const char* subject, const char* message) {
   // send motion alert to Telegram
-  const char* pos1 = strchr(subject + 1, '/'); // extract filename
-  const char* pos2 = strrchr(subject + 1, '.'); // remove extension
+  const char* pos1 = strchr(subject + 1, '/');   // extract filename
+  const char* pos2 = strrchr(subject + 1, '.');  // remove extension
   // make filename into command
   if (pos1 != NULL && pos2 != NULL) {
     strncpy(alertCaption, pos1, pos2 - pos1);
     alertCaption[pos2 - pos1] = 0;
     strcat(alertCaption, " from ");
     strncat(alertCaption, hostName, sizeof(alertCaption) - strlen(alertCaption) - 1);
-    if (alertBufferSize) alertReady = true; // return image
-  } else LOG_WRN("Unable to send motion alert");
+    if (alertBufferSize) alertReady = true;  // return image
+  } else
+    LOG_WRN("Unable to send motion alert");
 }
 
 static bool downloadAvi(const char* userCmd) {
-  char* pos = strchr(userCmd, '_'); // if contains '_', assume filename
+  char* pos = strchr(userCmd, '_');  // if contains '_', assume filename
   if (pos != NULL) {
     // add folder name and avi extension to incoming file name
     char fileName[FILE_NAME_LEN];
     strncpy(fileName, userCmd, FILE_NAME_LEN - 1);
     pos = strchr(fileName, '_');
     memmove(pos, fileName, sizeof(fileName) - (pos - fileName));
-    strncat(fileName, ".avi", sizeof(fileName - 1) - strlen(fileName)); 
-    if (STORAGE.exists(fileName)) sendTgramFile(fileName, "video/x-msvideo", "");
-    else sendTgramMessage("AVI file not found: ", fileName, "");
+    strncat(fileName, ".avi", sizeof(fileName - 1) - strlen(fileName));
+    if (STORAGE.exists(fileName))
+      sendTgramFile(fileName, "video/x-msvideo", "");
+    else
+      sendTgramMessage("AVI file not found: ", fileName, "");
   }
   return (bool)pos;
 }
@@ -760,11 +901,11 @@ static void saveRamLog(const char* ramLogName) {
   // save ramlog to storage for upload to telegram
   File ramFile = STORAGE.open(ramLogName, FILE_WRITE);
   int startPtr, endPtr;
-  startPtr = endPtr = mlogEnd;  
+  startPtr = endPtr = mlogEnd;
   // write log in chunks
   do {
     int maxChunk = startPtr < endPtr ? endPtr - startPtr : RAM_LOG_LEN - startPtr;
-    size_t chunkSize = std::min(CHUNKSIZE, maxChunk);    
+    size_t chunkSize = std::min(CHUNKSIZE, maxChunk);
     if (chunkSize > 0) ramFile.write((uint8_t*)messageLog + startPtr, chunkSize);
     startPtr += chunkSize;
     if (startPtr >= RAM_LOG_LEN) startPtr = 0;
@@ -775,26 +916,28 @@ static void saveRamLog(const char* ramLogName) {
 void appSpecificTelegramTask(void* p) {
 #if INCLUDE_TGRAM
   // process Telegram interactions
-  snprintf(tgramHdr, FILE_NAME_LEN - 1, "%s\n Ver: " APP_VER "\n\n/snap\n\n/log\n\n/extIP", hostName); 
+  snprintf(tgramHdr, FILE_NAME_LEN - 1, "%s\n Ver: " APP_VER "\n\n/snap\n\n/log\n\n/extIP",
+           hostName);
   sendTgramMessage("Rebooted", "", "");
   char userCmd[FILE_NAME_LEN];
-  
+
   while (true) {
     // service requests from Telegram
-    if (getTgramUpdate(userCmd)) {     
+    if (getTgramUpdate(userCmd)) {
       if (!strcmp(userCmd, "/snap")) {
         doKeepFrame = true;
-        delay(1000); // time to get frame
+        delay(1000);  // time to get frame
         sprintf(userCmd, "/snap from %s", hostName);
         sendTgramPhoto(alertBuffer, alertBufferSize, userCmd);
       } else if (!strcmp(userCmd, "/log")) {
-        // build unique ram log file name using time 
+        // build unique ram log file name using time
         char ramLogName[FILE_NAME_LEN];
         sprintf(ramLogName, "%s/ramlog_", DATA_DIR);
         time_t currEpoch = getEpoch();
-        strftime(ramLogName + strlen(ramLogName), FILE_NAME_LEN - strlen(ramLogName), "%H%M%S", localtime(&currEpoch));
+        strftime(ramLogName + strlen(ramLogName), FILE_NAME_LEN - strlen(ramLogName), "%H%M%S",
+                 localtime(&currEpoch));
         strcat(ramLogName, TEXT_EXT);
-        saveRamLog(ramLogName);   
+        saveRamLog(ramLogName);
         sprintf(userCmd, "/log from %s", hostName);
         sendTgramFile(ramLogName, "text/plain", userCmd);
         deleteFolderOrFile(ramLogName);
@@ -813,7 +956,8 @@ void appSpecificTelegramTask(void* p) {
         alertReady = false;
         sendTgramPhoto(alertBuffer, alertBufferSize, alertCaption);
         alertBufferSize = 0;
-      } else delay(5000); // avoid thrashing
+      } else
+        delay(5000);  // avoid thrashing
     }
   }
 #endif

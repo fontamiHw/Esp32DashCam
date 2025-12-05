@@ -1,34 +1,34 @@
-#include "appGlobals.h"
 #include "appDefaultConfig.h"
+#include "appGlobals.h"
 
 // Function to get the selection options string for a given parameter name
 String getSelectionOptions(const char* paramName) {
   String config = String(appConfig);
   String searchName = String(paramName) + "~";
-  
+
   int paramPos = config.indexOf(searchName);
   if (paramPos == -1) {
-    return ""; // Parameter not found
+    return "";  // Parameter not found
   }
-  
+
   // Find the line containing this parameter
   int lineStart = paramPos;
   while (lineStart > 0 && config.charAt(lineStart - 1) != '\n') {
     lineStart--;
   }
-  
+
   int lineEnd = config.indexOf('\n', paramPos);
   if (lineEnd == -1) {
     lineEnd = config.length();
   }
-  
+
   String line = config.substring(lineStart, lineEnd);
-  
+
   // Parse the line format: paramName~defaultValue~group~S:option1:option2:option3~description
   int tildaCount = 0;
   int lastTildaPos = -1;
   int currentPos = 0;
-  
+
   // Find the 4th tilda (before the S: part)
   while (currentPos < line.length() && tildaCount < 3) {
     if (line.charAt(currentPos) == '~') {
@@ -39,64 +39,64 @@ String getSelectionOptions(const char* paramName) {
     }
     currentPos++;
   }
-  
+
   if (lastTildaPos == -1) {
-    return ""; // Invalid format
+    return "";  // Invalid format
   }
-  
+
   // Find the next tilda after the S: part
   int nextTildaPos = line.indexOf('~', lastTildaPos + 1);
   if (nextTildaPos == -1) {
     nextTildaPos = line.length();
   }
-  
+
   String selectionPart = line.substring(lastTildaPos + 1, nextTildaPos);
-  
+
   // Check if it starts with "S:" (case insensitive)
-  if (selectionPart.length() > 2 && 
-      (selectionPart.charAt(0) == 'S' || selectionPart.charAt(0) == 's') && 
+  if (selectionPart.length() > 2 &&
+      (selectionPart.charAt(0) == 'S' || selectionPart.charAt(0) == 's') &&
       selectionPart.charAt(1) == ':') {
-    return selectionPart.substring(2); // Return everything after "S:"
+    return selectionPart.substring(2);  // Return everything after "S:"
   }
-  
-  return ""; // Not a selection parameter
+
+  return "";  // Not a selection parameter
 }
 
 // Function to get a specific selection option by index for a given parameter name
 String getSelectionOption(const char* paramName, int index) {
   String options = getSelectionOptions(paramName);
-  
+
   if (options.length() == 0) {
-    return ""; // No selection options found
+    return "";  // No selection options found
   }
-  
+
   if (index < 0) {
-    return ""; // Invalid index
+    return "";  // Invalid index
   }
-  
+
   // Split the options by ':' and return the option at the specified index
   int currentIndex = 0;
   int startPos = 0;
-  
+
   while (currentIndex < index && startPos < options.length()) {
     int colonPos = options.indexOf(':', startPos);
     if (colonPos == -1) {
-      return ""; // Index out of bounds
+      return "";  // Index out of bounds
     }
     startPos = colonPos + 1;
     currentIndex++;
   }
-  
+
   if (currentIndex != index) {
-    return ""; // Index out of bounds
+    return "";  // Index out of bounds
   }
-  
+
   // Find the end of the current option
   int endPos = options.indexOf(':', startPos);
   if (endPos == -1) {
-    endPos = options.length(); // Last option
+    endPos = options.length();  // Last option
   }
-  
+
   return options.substring(startPos, endPos);
 }
 
@@ -246,7 +246,7 @@ AP_Pass~~0~T~AP Password
 AP_ip~~0~T~AP IP Address if not 192.168.4.1
 AP_sn~~0~T~AP subnet
 AP_gw~~0~T~AP gateway
-allowAP~1~0~C~Allow simultaneous AP 
+allowAP~1~0~C~Allow simultaneous AP
 doGetExtIP~1~0~C~Enable get external IP
 wifiTimeoutSecs~30~0~N~WiFi connect timeout (secs)
 logType~0~99~N~Output log selection
@@ -286,9 +286,8 @@ lampType~0~3~S:Manual:PIR~How lamp activated
 SVactive~0~3~C~Enable servo use
 pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
-accUse~0~3~C~Use Accelerometer (ADXL345) for start Video
-accINT~0~3~S:NO INT:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer
-accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer
+accINT~0~3~S:NO INT:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer (ADXL345)
+accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer (ADXL345)
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor
@@ -328,8 +327,8 @@ teleUse~0~3~C~Use telemetry recording
 teleInterval~1~3~N~Telemetry collection interval (secs)
 RCactive~0~3~C~Enable remote control
 servoSteerPin~~4~N~Pin used for steering servo
-motorRevPin~~4~N~Pin used for motor reverse / left track 
-motorFwdPin~~4~N~Pin used for motor forward / left track 
+motorRevPin~~4~N~Pin used for motor reverse / left track
+motorFwdPin~~4~N~Pin used for motor forward / left track
 motorRevPinR~~4~N~Pin used for right track reverse
 motorFwdPinR~~4~N~Pin used for right track forward
 lightsRCpin~~4~N~Pin used for RC lights output
@@ -341,7 +340,7 @@ stickzPushPin~~4~N~Pin used for joystick lights
 stickUse~0~4~C~Use joystick
 pwmFreq~50~4~N~RC Motor PWM frequency
 maxSteerAngle~45~4~N~Max steering angle from straightahead
-maxTurnSpeed~50~4~N~Max tracked turn speed differential 
+maxTurnSpeed~50~4~N~Max tracked turn speed differential
 maxDutyCycle~100~4~N~Max motor duty cycle % (speed)
 minDutyCycle~10~4~N~Min motor duty cycle % (stop)
 allowReverse~1~4~C~Reverse motion required
@@ -370,7 +369,7 @@ pinFocus~-1~5~N~Pin connected to camera focus
 extCam~0~5~C~Use external camera
 AtakePhotos~Start~5~A~Start photogrammetry
 BabortPhotos~Abort~5~A~Abort photogrammetry
-relayPin~-1~3~N~Pin to switch relay 
+relayPin~-1~3~N~Pin to switch relay
 relayMode~0~3~S:Manual:Night~How relay activated
 relaySwitch~0~3~C~Switch relay off / on
 I2Csda~-1~3~N~I2C SDA pin if unshared

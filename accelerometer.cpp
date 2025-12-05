@@ -1,6 +1,6 @@
 #include "appGlobals.h"
-#if INCLUDE_ACCELEROMETER
 
+#if INCLUDE_ACCELEROMETER
 #include "accelerometer.h"
 #include "appDefaultConfig.h"
 
@@ -8,48 +8,50 @@
 #define LED_OFF 1
 
 TaskHandle_t accHandle = NULL;
-static uint32_t blink_delay = 1000;  // Delay between changing state on LED pin
-int led = 33;
+static uint32_t blink_delay_milli = 1000;  // Delay between changing state on LED pin
+static int led = 33;
+static int accTimeVideo;  // time in minutes to record video on accelerometer activation
 
-void blink(char* nBlink, char ledStatus) {
+bool dashChangeVideo = false;
+
+
+void blinkAndDelay(char* nBlink, char ledStatus) {
   digitalWrite(led, ledStatus);  // turn the LED on (HIGH is the voltage level)
-  delay(blink_delay);
+  delay(blink_delay_milli);
   (*nBlink)++;
 }
 
 static void accelerometerTask(void* parameter) {
-  uint32_t blink_delay = *((uint32_t*)parameter);
   bool accVal = false;
   long changeVideo = 0;
-  int blinkSeconds = blink_delay / 1000;
+  int blinkSeconds = blink_delay_milli / 1000;
+
   for (;;) {
     char nBlink = 0;
-    if (accUse) {
-      accVal = getAccVal();
-    } else {
-      accVal = false;
-    }
+    accVal = getAccVal();
 
     if (accVal) {
-      blink(&nBlink, LED_ON);
+      accTimeVideo = dashCamOn;
+      blinkAndDelay(&nBlink, LED_ON);  // first blink
+    } else {
+      accTimeVideo = 0;
     }
 
-    blink(&nBlink, LED_OFF);
+    blinkAndDelay(&nBlink, LED_OFF);  // second blink
 
-    changeVideo += blinkSeconds * 2;
-    if (changeVideo >= (dashCamOn * 60)) {
+    changeVideo += blinkSeconds * nBlink;
+
+    bool sensor = (accTimeVideo && accVal);
+    if (sensor && (changeVideo >= (accTimeVideo * 60))) {
       changeVideo = 0;
-      LOG_INF("Time to change video. and call static bool closeAvi() {in mjpeg2sd.cpp}");
+      LOG_INF("\n Time to change video. \nDashCamOn %d, accTimeVideo %d", dashCamOn, accTimeVideo);
+      dashChangeVideo = true;
     }
   }
 }
 
 static void startAccelerometerTask() {
-  pinMode(led, OUTPUT);
-  digitalWrite(led, LED_OFF);  // set lamp pin fully off as sd_mmc library still
-                               // initialises pin 4 in 1 line mode
-  xTaskCreate(&accelerometerTask, "accelerometerTask", ACC_STACK_SIZE, &blink_delay, ACC_PRI,
-              &accHandle);
+  xTaskCreate(&accelerometerTask, "accelerometerTask", ACC_STACK_SIZE, NULL, ACC_PRI, &accHandle);
 
   LOG_INF("Task started");
 }
@@ -59,13 +61,17 @@ TaskHandle_t getAccelerometerTaskId() {
 }
 
 void prepAcc() {
-  LOG_INF("Preparing accelerometer");
+
+  LOG_INF("--------------- Setup accelerometer");
+  accTimeVideo = dashCamOn;  // time in minutes to record video on accelerometer activation
+  LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
+  LOG_INF("     DashCam is activates %d", getAccVal());
+  pinMode(led, OUTPUT);
+  digitalWrite(led, LED_OFF);
+  LOG_INF("--------------- Setup Completed");
+
+  // finally start accelerometer task
   startAccelerometerTask();
-  if (accUse) {
-    LOG_INF("activation CS on %s", getSelectionOption("accCS", accCS));
-  } else {
-    LOG_INF("accelerometer Not in use");
-  }
 }
 
 bool getAccVal() {
@@ -76,10 +82,8 @@ bool getAccVal() {
 }
 
 void printAccelerometerStatus() {
-  if (accUse) {
-    LOG_INF("- activate accelerometer detection");
-    LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
-    LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
-  }
+  LOG_INF("- activate accelerometer detection");
+  LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
+  LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
 }
 #endif

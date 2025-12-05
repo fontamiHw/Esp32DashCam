@@ -300,7 +300,7 @@ static void saveFrame(camera_fb_t* fb) {
   LOG_VRB("============================");
 }
 
-static bool closeAvi() {
+bool closeAvi() {
   // closes the recorded file
   uint32_t vidDuration = millis() - startTime;
   uint32_t vidDurationSecs = lround(vidDuration / 1000.0);
@@ -511,10 +511,21 @@ static boolean processFrame() {
   }
 
   esp_camera_fb_return(fb);
+
+  if (dashChangeVideo) {
+    LOG_INF("DashCam want to save %d", dashChangeVideo);
+    // time to change video file
+    finishRecording = true;
+    stopPlayback = true;  // stop any subsequent playback
+  }
+
   if (finishRecording) {
     // cleanly finish recording (normal or forced)
     if (stopPlayback) closeAvi();
     finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
+    if (getAccVal()) {
+      dashChangeVideo = false;
+    }
   }
   return res;
 }
@@ -527,7 +538,8 @@ static void captureTask(void* parameter) {
     if (ulNotifiedValue > FB_CNT)
       ulNotifiedValue = FB_CNT;  // prevent too big queue if FPS excessive
     // may be more than one isr outstanding if the task delayed by SD write or jpeg decode
-    while (ulNotifiedValue-- > 0) processFrame();
+    bool acc = getAccVal();
+    while (ulNotifiedValue-- > 0 && acc) processFrame();
   }
   vTaskDelete(NULL);
 }
