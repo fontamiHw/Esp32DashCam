@@ -149,7 +149,7 @@ void prepAcc() {
   LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
   char intMode = getIntMode();
   LOG_INF("activation INT on %s", getSelectionOption("accINT", accINT));
-  LOG_INF("     DashCam Interrut is active in %d", attachInterrupts(intMode));
+  LOG_INF("     DashCam Interrupt is active in %d", getSelectionOption("accINT", accINT));
   pinMode(led, OUTPUT);
   digitalWrite(led, LED_OFF);
 
