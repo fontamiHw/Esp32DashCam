@@ -819,7 +819,7 @@ bool prepRecording() {
       LOG_INF("- raise pin %u to 3.3V", pirPin);
     }
 #if INCLUDE_ACCELEROMETER
-    printAccelerometerStatus();
+    printAccelerometerConfig();
 #endif
 #endif
     if (useMotion) LOG_INF("- move in front of camera");

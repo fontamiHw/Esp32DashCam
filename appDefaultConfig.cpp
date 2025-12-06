@@ -287,7 +287,7 @@ SVactive~0~3~C~Enable servo use
 pirPin~~3~N~Pin used for PIR
 lampPin~~3~N~Pin used for Lamp
 accINT~0~3~S:NO INT:INT1:INT2:INT1+INT2~Interrupt mode on Accellerometer (ADXL345)
-accCS~0~3~S:IO4:IO33~Pin used for CS on Accellerometer (ADXL345)
+accCS~0~3~S:IO12:IO13~Pin used for CS on Accellerometer (ADXL345)
 servoPanPin~~6~N~Pin used for Pan Servo
 servoTiltPin~~6~N~Pin used for Tilt Servo
 ds18b20Pin~~3~N~Pin used for DS18B20 temperature sensor
