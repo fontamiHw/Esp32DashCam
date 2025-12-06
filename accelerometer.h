@@ -7,5 +7,5 @@
 
 void prepAcc();
 TaskHandle_t getAccelerometerTaskId();
-bool getAccVal();
+char getIntMode();
 void printAccelerometerConfig();

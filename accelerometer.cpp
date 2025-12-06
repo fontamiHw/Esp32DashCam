@@ -31,13 +31,13 @@ static void blinkAndDelay(char* nBlink, char ledStatus) {
 }
 
 static void accelerometerTask(void* parameter) {
-  bool accVal = false;
+  char accVal = 0;
   long changeVideo = 0;
   int blinkSeconds = blink_delay_milli / 1000;
 
   for (;;) {
     char nBlink = 0;
-    accVal = getAccVal();
+    accVal = getIntMode();
 
     if (accVal) {
       accTimeVideo = dashCamOn;
@@ -99,7 +99,7 @@ void blink2(void* pvParameters) {
 }
 #define INT_PIN_1 12
 #define INT_PIN_2 13
-static int attachInterrupts(int interruptMode) {
+static int attachInterrupts(char interruptMode) {
   LOG_INF("       Attaching interrupts and its tasks");
   interruptSemaphore1 = xSemaphoreCreateBinary();  // Create semaphore
   interruptSemaphore2 = xSemaphoreCreateBinary();
@@ -147,8 +147,9 @@ void prepAcc() {
   LOG_INF("--------------- Setup accelerometer");
   accTimeVideo = dashCamOn;  // time in minutes to record video on accelerometer activation
   LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
-  int intPin = getAccVal();
-  LOG_INF("     DashCam Interrut is active in %d", attachInterrupts(intPin));
+  char intMode = getIntMode();
+  LOG_INF("activation INT on %s", getSelectionOption("accINT", accINT));
+  LOG_INF("     DashCam Interrut is active in %d", attachInterrupts(intMode));
   pinMode(led, OUTPUT);
   digitalWrite(led, LED_OFF);
 
@@ -157,17 +158,15 @@ void prepAcc() {
   LOG_INF("--------------- Setup Completed");
 }
 
-bool getAccVal() {
+char getIntMode() {
   // get accelerometer status
   // MIK da studiare come ritornare che si e' attivi
-  bool ret = accCS > 0;
-  return ret;
+  return accINT;
 }
 
 void printAccelerometerConfig() {
-  LOG_INF("- activate accelerometer detection");
-  LOG_INF("- attach CS to pin %s", getSelectionOption("accCS", accCS));
-  LOG_INF("- Interrupt used %s", getSelectionOption("accINT", accINT));
+  LOG_INF("- activate accelerometer detection. Interrupt used %s",
+          getSelectionOption("accINT", accINT));
 }
 
 TaskHandle_t getAccelerometerTaskId() {

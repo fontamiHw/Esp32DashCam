@@ -116,12 +116,12 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
 #if INCLUDE_PERIPH
   else if (!strcmp(variable, "pirUse"))
     pirUse = (bool)intVal;
-  // accellerometer
-  else if (!strcmp(variable, "accCS")) {
-    accCS = intVal;
-    LOG_INF("activation CS on %s", getSelectionOption("accCS", accCS));
+#if INCLUDE_ACCELEROMETER
+  else if (!strcmp(variable, "accINT")) {
+    accINT = intVal;
+    LOG_INF("activation INT on %s", getSelectionOption("accINT", accINT));
   }
-  // else if (!strcmp(variable, "accINT")) accINT = intVal;
+#endif
   // lamp
   else if (!strcmp(variable, "lampLevel")) {
     lampLevel = intVal;

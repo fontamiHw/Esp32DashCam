@@ -439,7 +439,6 @@ extern int srtInterval;
 
 
 // accelerometer (ADXL345) pins
-extern int accCS;
 extern int accINT;
 
 extern bool dashChangeVideo;

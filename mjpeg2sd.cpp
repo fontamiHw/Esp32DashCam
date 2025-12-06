@@ -523,7 +523,7 @@ static boolean processFrame() {
     // cleanly finish recording (normal or forced)
     if (stopPlayback) closeAvi();
     finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
-    if (getAccVal()) {
+    if (getIntMode()) {
       dashChangeVideo = false;
     }
   }
@@ -538,7 +538,7 @@ static void captureTask(void* parameter) {
     if (ulNotifiedValue > FB_CNT)
       ulNotifiedValue = FB_CNT;  // prevent too big queue if FPS excessive
     // may be more than one isr outstanding if the task delayed by SD write or jpeg decode
-    bool acc = getAccVal();
+    char acc = getIntMode();
     while (ulNotifiedValue-- > 0 && acc) processFrame();
   }
   vTaskDelete(NULL);

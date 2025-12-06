@@ -56,7 +56,6 @@ int buzzerPin;  // if buzzerUse is true
 
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
-int accCS = 0;
 int accINT = 0;
 
 // Camera servos
