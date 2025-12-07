@@ -21,15 +21,16 @@ bool accDetectContact = false;
 bool dashRecord = false;
 
 
-void keyISR1() {  // ISR definition
+static void keyISR1() {  // ISR definition
   // at the end of debug remove the semaphore and the relative task
   dashRecord = true;
 }
 
-void keyISR2() {
+static void keyISR2() {
   // at the end of debug remove the semaphore and the relative task
   accDetectContact = true;
-  dashRecord = false;
+  dashChangeVideo = true;
+  // dashRecord = false;
 }
 
 static void blinkAndDelay(char* nBlink, char ledStatus) {
@@ -107,6 +108,8 @@ void prepAcc() {
   LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
   LOG_INF("     DashCam Interrupt is active in %s", getSelectionOption("accINT", accINT));
   attachInterrupts(accINT);
+
+  // prepare led to show camera is recording
   pinMode(led, OUTPUT);
   digitalWrite(led, LED_OFF);
 
