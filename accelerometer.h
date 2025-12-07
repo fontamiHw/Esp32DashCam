@@ -7,5 +7,4 @@
 
 void prepAcc();
 TaskHandle_t getAccelerometerTaskId();
-char getIntMode();
-void printAccelerometerConfig();
+bool dashShallRecord();

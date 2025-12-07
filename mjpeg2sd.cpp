@@ -523,7 +523,9 @@ static boolean processFrame() {
     // cleanly finish recording (normal or forced)
     if (stopPlayback) closeAvi();
     finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
-    if (getIntMode()) {
+
+    // stop any operation to save video
+    if (dashShallRecord()) {
       dashChangeVideo = false;
     }
   }
@@ -538,7 +540,7 @@ static void captureTask(void* parameter) {
     if (ulNotifiedValue > FB_CNT)
       ulNotifiedValue = FB_CNT;  // prevent too big queue if FPS excessive
     // may be more than one isr outstanding if the task delayed by SD write or jpeg decode
-    char acc = getIntMode();
+    bool acc = dashShallRecord();
     while (ulNotifiedValue-- > 0 && acc) processFrame();
   }
   vTaskDelete(NULL);
@@ -818,9 +820,6 @@ bool prepRecording() {
       LOG_INF("- attach PIR to pin %u", pirPin);
       LOG_INF("- raise pin %u to 3.3V", pirPin);
     }
-#if INCLUDE_ACCELEROMETER
-    printAccelerometerConfig();
-#endif
 #endif
     if (useMotion) LOG_INF("- move in front of camera");
   }
