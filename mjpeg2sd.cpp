@@ -541,7 +541,9 @@ static void captureTask(void* parameter) {
       ulNotifiedValue = FB_CNT;  // prevent too big queue if FPS excessive
     // may be more than one isr outstanding if the task delayed by SD write or jpeg decode
     bool acc = dashShallRecord();
-    while (ulNotifiedValue-- > 0 && acc) processFrame();
+    while (ulNotifiedValue-- > 0 && acc) {
+      processFrame();
+    }
   }
   vTaskDelete(NULL);
 }
