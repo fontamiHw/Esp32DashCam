@@ -17,7 +17,7 @@ static int led = 33;
 static int accTimeVideo;  // time in minutes to record video on accelerometer activation
 
 bool dashChangeVideo = false;
-bool accDetectContact = false;
+bool collisionDetect = false;
 bool dashRecord = false;
 
 
@@ -28,9 +28,7 @@ static void keyISR1() {  // ISR definition
 
 static void keyISR2() {
   // at the end of debug remove the semaphore and the relative task
-  accDetectContact = true;
-  dashChangeVideo = true;
-  // dashRecord = false;
+  collisionDetect = true;
 }
 
 static void blinkAndDelay(char* nBlink, char ledStatus) {
@@ -105,6 +103,7 @@ static int attachInterrupts(char interruptMode) {
 void prepAcc() {
   LOG_INF("--------------- Setup accelerometer");
   accTimeVideo = dashCamOn;  // time in minutes to record video on accelerometer activation
+  dashRecord = true;         // enable dashcam recording by default
   LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
   LOG_INF("     DashCam Interrupt is active in %s", getSelectionOption("accINT", accINT));
   attachInterrupts(accINT);

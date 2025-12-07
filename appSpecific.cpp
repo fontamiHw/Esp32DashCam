@@ -8,6 +8,7 @@
 //
 // s60sc 2022 - 2024
 
+#include "accelerometer.h"
 #include "appDefaultConfig.h"
 #include "appGlobals.h"
 

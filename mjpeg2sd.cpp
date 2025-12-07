@@ -511,23 +511,22 @@ static boolean processFrame() {
   }
 
   esp_camera_fb_return(fb);
-
-  if (dashChangeVideo) {
+#if INCLUDE_ACCELEROMETER
+  if (dashChangeVideo || collisionDetect) {
     LOG_INF("DashCam want to save %d", dashChangeVideo);
     // time to change video file
     finishRecording = true;
     stopPlayback = true;  // stop any subsequent playback
+    dashChangeVideo = false;
+    collisionDetect = false;
   }
-
+#endif
   if (finishRecording) {
     // cleanly finish recording (normal or forced)
-    if (stopPlayback) closeAvi();
-    finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
-
-    // stop any operation to save video
-    if (dashShallRecord()) {
-      dashChangeVideo = false;
+    if (stopPlayback) {
+      closeAvi();
     }
+    finishRecording = isCapturing = wasCapturing = stopPlayback = false;  // allow for playbacks
   }
   return res;
 }

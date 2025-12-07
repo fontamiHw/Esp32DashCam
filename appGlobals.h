@@ -438,11 +438,6 @@ extern bool teleUse;
 extern int srtInterval;
 
 
-// accelerometer (ADXL345) pins
-extern int accINT;
-
-extern bool dashChangeVideo;
-
 // Pan / Tilt Servos
 extern int servoPanPin;
 extern int servoTiltPin;
