@@ -23,8 +23,8 @@ String currentDir = "";
 
 
 static void keyISR1() {  // ISR definition
-  // at the end of debug remove the semaphore and the relative task
-  dashRecord = true;
+  // Detected move in X axis toggle the video recording
+  dashRecord = !dashRecord;
 }
 
 static void keyISR2() {
@@ -62,7 +62,8 @@ static void accelerometerTask(void* parameter) {
     bool sensor = (accTimeVideo && dashRecord);
     if (sensor && (changeVideo >= (accTimeVideo * 60))) {
       changeVideo = 0;
-      LOG_INF("\n Time to change video. \nDashCamOn %d, accTimeVideo %d", dashCamOn, accTimeVideo);
+      LOG_INF("\n Time to change video. \nDashCamOn %d, (accTimeVideo [%d] && dashRecord [%d]) %d",
+              dashCamOn, accTimeVideo, dashRecord);
       dashChangeVideo = true;
     }
   }
@@ -129,7 +130,7 @@ TaskHandle_t getAccelerometerTaskId() {
 }
 
 
-void accCurrentAviDir(String _currentDir) {
+void accSetCurrentAviDir(String _currentDir) {
   currentDir = _currentDir;
   LOG_INF("Recording avi folder is %s", currentDir);
 }

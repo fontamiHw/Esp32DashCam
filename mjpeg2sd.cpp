@@ -131,8 +131,8 @@ static void openAvi() {
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
   dateFormat(partName, sizeof(partName), true);
-  STORAGE.mkdir(partName);     // make date folder if not present
-  accCurrentAviDir(partName);  // inform accelerometer module of current avi folder
+  STORAGE.mkdir(partName);        // make date folder if not present
+  accSetCurrentAviDir(partName);  // inform accelerometer module of current avi folder
   dateFormat(partName, sizeof(partName), false);
   // open avi file with temporary name
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);

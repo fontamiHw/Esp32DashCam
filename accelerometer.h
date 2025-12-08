@@ -14,5 +14,5 @@ extern bool collisionDetect;
 void prepAcc();
 TaskHandle_t getAccelerometerTaskId();
 bool dashShallRecord();
-void accCurrentAviDir(String currentDir);
+void accSetCurrentAviDir(String currentDir);
 void saveCurrentDir();
