@@ -131,7 +131,8 @@ static void openAvi() {
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
   dateFormat(partName, sizeof(partName), true);
-  STORAGE.mkdir(partName);  // make date folder if not present
+  STORAGE.mkdir(partName);     // make date folder if not present
+  accCurrentAviDir(partName);  // inform accelerometer module of current avi folder
   dateFormat(partName, sizeof(partName), false);
   // open avi file with temporary name
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);
@@ -408,6 +409,13 @@ bool closeAvi() {
   }
 }
 
+#if INCLUDE_ACCELEROMETER
+static void closeAvi(bool collisionDetect) {
+  closeAvi();
+  saveCurrentDir();
+}
+#endif
+
 static boolean processFrame() {
   // get camera frame
   static bool wasCapturing = false;
@@ -513,12 +521,16 @@ static boolean processFrame() {
   esp_camera_fb_return(fb);
 #if INCLUDE_ACCELEROMETER
   if (dashChangeVideo || collisionDetect) {
-    LOG_INF("DashCam want to save %d", dashChangeVideo);
+    if (dashChangeVideo) {
+      LOG_INF("DashCam want to normally save ");
+    } else if (collisionDetect) {
+      LOG_INF("DashCam collision detected");
+    }
     // time to change video file
-    finishRecording = true;
-    stopPlayback = true;  // stop any subsequent playback
+    closeAvi(collisionDetect);
     dashChangeVideo = false;
     collisionDetect = false;
+    finishRecording = isCapturing = wasCapturing = stopPlayback = false;
   }
 #endif
   if (finishRecording) {

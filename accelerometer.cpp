@@ -19,6 +19,7 @@ static int accTimeVideo;  // time in minutes to record video on accelerometer ac
 bool dashChangeVideo = false;
 bool collisionDetect = false;
 bool dashRecord = false;
+String currentDir = "";
 
 
 static void keyISR1() {  // ISR definition
@@ -125,5 +126,17 @@ bool dashShallRecord() {
 
 TaskHandle_t getAccelerometerTaskId() {
   return accHandle;
+}
+
+
+void accCurrentAviDir(String _currentDir) {
+  currentDir = _currentDir;
+  LOG_INF("Recording avi folder is %s", currentDir);
+}
+
+
+void saveCurrentDir() {
+  LOG_INF("Crash Detect Saving current %s", currentDir);
+  STORAGE.rename(currentDir, "/crashDetect");
 }
 #endif
