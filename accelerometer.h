@@ -14,6 +14,9 @@ extern bool collisionDetect;
 
 void prepAcc();
 TaskHandle_t getAccelerometerTaskId();
+/*
+ * Return true if the DahCam shall record the video
+ */
 bool dashShallRecord();
 void accSetCurrentAviDir(String currentDir);
 void saveCurrentDir();

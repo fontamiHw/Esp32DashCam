@@ -117,7 +117,6 @@ void prepAcc() {
 
 
 bool dashShallRecord() {
-  // check if dashcam activated recording needed
   return dashRecord;
 }
 
