@@ -102,7 +102,6 @@ static int attachInterrupts(char interruptMode) {
 void prepAcc() {
   LOG_INF("--------------- Setup accelerometer");
   accTimeVideo = dashCamOn;  // time in minutes to record video on accelerometer activation
-  dashRecord = true;         // enable dashcam recording by default
   LOG_INF("     DashCam video legth %d minutes", accTimeVideo);
   LOG_INF("     DashCam Interrupt is active in %s", getSelectionOption("accINT", accINT));
   attachInterrupts(accINT);
