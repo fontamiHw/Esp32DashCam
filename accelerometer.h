@@ -4,6 +4,7 @@
 
 #define ACC_STACK_SIZE (1024 * 2)
 #define ACC_PRI 2
+#define CRASH_DIR "/crashDetect"
 
 
 // accelerometer (ADXL345) pins

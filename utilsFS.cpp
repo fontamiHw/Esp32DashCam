@@ -1,31 +1,37 @@
 // General purpose SD card and flash storage utilities
 //
 // Card can be accessed using a 1 data bit or 4 data bits (if allowed by board)
-// 4 data bits is potentially faster on ESP32S3 (depending on card spec) 
+// 4 data bits is potentially faster on ESP32S3 (depending on card spec)
 // but requires 3 additional pins
 /* The following #defines must be declared under the relevant camera entry in camera_pins.h
-   1 bit       4 bit        
-   SD_MMC_CMD  SD_MMC_CMD  
-   SD_MMC_CLK  SD_MMC_CLK   
-   SD_MMC_D0   SD_MMC_D0    
-               SD_MMC_D1     
-               SD_MMC_D2    
-               SD_MMC_D3    
+   1 bit       4 bit
+   SD_MMC_CMD  SD_MMC_CMD
+   SD_MMC_CLK  SD_MMC_CLK
+   SD_MMC_D0   SD_MMC_D0
+               SD_MMC_D1
+               SD_MMC_D2
+               SD_MMC_D3
 */
 // s60sc 2021, 2022, 2025
 
 #include "appGlobals.h"
 #include "ff.h"
 #include "vfs_fat_internal.h"
+#if INCLUDE_ACCELEROMETER
+#include "accelerometer.h"
+#endif
 
 // Storage settings
-int sdMinCardFreeSpace = 100; // Minimum amount of card free Megabytes before sdFreeSpaceMode action is enabled
-int sdFreeSpaceMode = 1; // 0 - No Check, 1 - Delete oldest dir, 2 - Upload oldest dir to FTP/HFS and then delete on SD 
-bool formatIfMountFailed = true; // Auto format the file system if mount failed. Set to false to not auto format.
+int sdMinCardFreeSpace =
+    100;  // Minimum amount of card free Megabytes before sdFreeSpaceMode action is enabled
+int sdFreeSpaceMode = 1;  // 0 - No Check, 1 - Delete oldest dir, 2 - Upload oldest dir to FTP/HFS
+                          // and then delete on SD
+bool formatIfMountFailed =
+    true;  // Auto format the file system if mount failed. Set to false to not auto format.
 static bool use1bitMode = true;
 static fs::FS fp = STORAGE;
 #if (!CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32S2)
-static int sdmmcFreq = BOARD_MAX_SDMMC_FREQ; // board specific default SD_MMC speed
+static int sdmmcFreq = BOARD_MAX_SDMMC_FREQ;  // board specific default SD_MMC speed
 #endif
 
 // hold sorted list of filenames/folders names in order of newest first
@@ -37,13 +43,18 @@ static char fsType[10] = {0};
 static void infoSD() {
 #if (!CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32S2)
   uint8_t cardType = SD_MMC.cardType();
-  if (cardType == CARD_NONE) LOG_WRN("No SD card attached");
+  if (cardType == CARD_NONE)
+    LOG_WRN("No SD card attached");
   else {
     char typeStr[8] = "UNKNOWN";
-    if (cardType == CARD_MMC) strcpy(typeStr, "MMC");
-    else if (cardType == CARD_SD) strcpy(typeStr, "SDSC");
-    else if (cardType == CARD_SDHC) strcpy(typeStr, "SDHC");
-    LOG_INF("SD card type %s, Size: %s, using %d bit mode @ %uMHz", typeStr, fmtSize(SD_MMC.cardSize()), use1bitMode ? 1 : 4, sdmmcFreq / 1000);
+    if (cardType == CARD_MMC)
+      strcpy(typeStr, "MMC");
+    else if (cardType == CARD_SD)
+      strcpy(typeStr, "SDSC");
+    else if (cardType == CARD_SDHC)
+      strcpy(typeStr, "SDHC");
+    LOG_INF("SD card type %s, Size: %s, using %d bit mode @ %uMHz", typeStr,
+            fmtSize(SD_MMC.cardSize()), use1bitMode ? 1 : 4, sdmmcFreq / 1000);
   }
 #endif
 }
@@ -51,7 +62,8 @@ static void infoSD() {
 static bool prepSD_MMC() {
   bool res = false;
 #if (!CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32S2)
-  if (psramFound()) heap_caps_malloc_extmem_enable(MIN_RAM); // small number to force vector into psram
+  if (psramFound())
+    heap_caps_malloc_extmem_enable(MIN_RAM);  // small number to force vector into psram
   fileVec.reserve(1000);
   if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
 #if CONFIG_IDF_TARGET_ESP32S3
@@ -59,33 +71,35 @@ static bool prepSD_MMC() {
   LOG_WRN("SD card pins not defined");
   return false;
 #else
- #if defined(SD_MMC_D1)
+#if defined(SD_MMC_D1)
   // assume 4 bit mode
   SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0, SD_MMC_D1, SD_MMC_D2, SD_MMC_D3);
   use1bitMode = false;
- #else
+#else
   // assume 1 bit mode
   SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
- #endif
 #endif
 #endif
-  
+#endif
+
   res = SD_MMC.begin("/sdcard", use1bitMode, formatIfMountFailed, sdmmcFreq);
 #if defined(CAMERA_MODEL_AI_THINKER)
   pinMode(4, OUTPUT);
-  digitalWrite(4, 0); // set lamp pin fully off as sd_mmc library still initialises pin 4 in 1 line mode
-#endif 
+  digitalWrite(
+      4, 0);  // set lamp pin fully off as sd_mmc library still initialises pin 4 in 1 line mode
+#endif
   if (res) {
     fp.mkdir(DATA_DIR);
     infoSD();
-  } else LOG_WRN("SD card mount failed");
+  } else
+    LOG_WRN("SD card mount failed");
 #endif
   return res;
 }
 
-static void listFolder(const char* rootDir) { 
+static void listFolder(const char* rootDir) {
   // list contents of folder
-  LOG_INF("Sketch size %s", fmtSize(ESP.getSketchSize()));    
+  LOG_INF("Sketch size %s", fmtSize(ESP.getSketchSize()));
   File root = fp.open(rootDir);
   File file = root.openNextFile();
   while (file) {
@@ -104,10 +118,22 @@ bool startStorage() {
   if ((fs::SDMMCFS*)&STORAGE == &SD_MMC) {
     strcpy(fsType, "SD_MMC");
     res = prepSD_MMC();
-    if (res) listFolder(DATA_DIR);
-    else snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Check SD card inserted");
+    if (res) {
+      listFolder(DATA_DIR);
+#if INCLUDE_ACCELEROMETER
+      LOG_INF(
+          "Accelerometer delete start ---------------------------------------------------------");
+      char oldestDir[FILE_NAME_LEN];
+      strcpy(oldestDir, "VUOTO");
+      getOldestDir(oldestDir);
+      LOG_INF("Accelerometer oldestDir to remove: %s", oldestDir);
+      deleteFolderOrFile(oldestDir);
+      LOG_INF("Accelerometer delete end ---------------------------------------------------------");
+#endif
+    } else
+      snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Check SD card inserted");
     debugMemory("startStorage");
-    return res; 
+    return res;
   }
 #endif
   // One of SPIFFS or LittleFS
@@ -126,28 +152,33 @@ bool startStorage() {
       if (res) LittleFS.mkdir(DATA_DIR);
     }
 #endif
-    if (res) {  
+    if (res) {
       // list details of files on file system
       const char* rootDir = !strcmp(fsType, "LittleFS") ? DATA_DIR : "/";
       listFolder(rootDir);
     }
   } else {
-    snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Failed to mount %s", fsType);  
-    dataFilesChecked = true; // disable setupAssist as no file system
+    snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Failed to mount %s", fsType);
+    dataFilesChecked = true;  // disable setupAssist as no file system
   }
   debugMemory("startStorage");
   return res;
 }
 
-static void getOldestDir(char* oldestDir) {
+void getOldestDir(char* oldestDir) {
   // get oldest folder by its date name
   File root = fp.open("/");
   File file = root.openNextFile();
-  if (file) strcpy(oldestDir, file.path()); // initialise oldestDir
+  if (file) strcpy(oldestDir, file.path());  // initialise oldestDir
   while (file) {
-    if (file.isDirectory() && strstr(file.name(), "System") == NULL // ignore Sys Vol Info
-        && strstr(DATA_DIR, file.name()) == NULL) { // ignore data folder
-      if (strcmp(oldestDir, file.path()) > 0) strcpy(oldestDir, file.path()); 
+    LOG_INF("Checking folder: %s", file.name());
+    if (file.isDirectory() && strstr(file.name(), "System") == NULL &&  // ignore Sys Vol Info
+        strstr(file.name(), DATA_DIR) == NULL
+#if INCLUDE_ACCELEROMETER
+        && (strstr(file.name(), CRASH_DIR) == NULL)
+#endif
+    ) {
+      if (strcmp(oldestDir, file.path()) > 0) strcpy(oldestDir, file.path());
     }
     file = root.openNextFile();
   }
@@ -161,20 +192,22 @@ void inline getFileDate(File& file, char* fileDate) {
   strftime(fileDate, sizeof(fileDate), "%Y-%m-%d %H:%M:%S", &lt);
 }
 
-bool checkFreeStorage() { 
+bool checkFreeStorage() {
   // Check for sufficient space on storage
   bool res = false;
   size_t freeSize = (size_t)((STORAGE.totalBytes() - STORAGE.usedBytes()) / ONEMEG);
-  if (!sdFreeSpaceMode && freeSize < sdMinCardFreeSpace) 
+  if (!sdFreeSpaceMode && freeSize < sdMinCardFreeSpace)
     LOG_WRN("Space left %uMB is less than minimum %uMB", freeSize, sdMinCardFreeSpace);
   else {
     // delete to make space
     while (freeSize < sdMinCardFreeSpace) {
       char oldestDir[FILE_NAME_LEN];
       getOldestDir(oldestDir);
-      LOG_WRN("Deleting oldest folder: %s %s", oldestDir, sdFreeSpaceMode == 2 ? "after uploading" : "");
+      LOG_WRN("Deleting oldest folder: %s %s", oldestDir,
+              sdFreeSpaceMode == 2 ? "after uploading" : "");
 #if INCLUDE_FTP_HFS
-      if (sdFreeSpaceMode == 2) fsStartTransfer(oldestDir); // transfer and then delete oldest folder
+      if (sdFreeSpaceMode == 2)
+        fsStartTransfer(oldestDir);  // transfer and then delete oldest folder
 #endif
       deleteFolderOrFile(oldestDir);
       freeSize = (size_t)((STORAGE.totalBytes() - STORAGE.usedBytes()) / ONEMEG);
@@ -183,18 +216,17 @@ bool checkFreeStorage() {
     res = true;
   }
   return res;
-} 
+}
 
 void setFolderName(const char* fname, char* fileName) {
-  // set current or previous folder 
+  // set current or previous folder
   char partName[FILE_NAME_LEN];
   if (strchr(fname, '~') != NULL) {
     if (!strcmp(fname, currentDir)) {
       dateFormat(partName, sizeof(partName), true);
       strcpy(fileName, partName);
       LOG_INF("Current directory set to %s", fileName);
-    }
-    else if (!strcmp(fname, previousDir)) {
+    } else if (!strcmp(fname, previousDir)) {
       struct timeval tv;
       gettimeofday(&tv, NULL);
       struct tm* tm = localtime(&tv.tv_sec);
@@ -203,14 +235,16 @@ void setFolderName(const char* fname, char* fileName) {
       strftime(partName, sizeof(partName), "/%Y%m%d", localtime(&prev));
       strcpy(fileName, partName);
       LOG_INF("Previous directory set to %s", fileName);
-    } else strcpy(fileName, ""); 
-  } else strcpy(fileName, fname);
+    } else
+      strcpy(fileName, "");
+  } else
+    strcpy(fileName, fname);
 }
 
 bool listDir(const char* fname, char* jsonBuff, size_t jsonBuffLen, const char* extension) {
   // either list day folders in root, or files in a day folder
   bool hasExtension = false;
-  char partJson[200]; // used to build SD page json buffer
+  char partJson[200];  // used to build SD page json buffer
   bool noEntries = true;
   char fileName[FILE_NAME_LEN];
   setFolderName(fname, fileName);
@@ -219,25 +253,29 @@ bool listDir(const char* fname, char* jsonBuff, size_t jsonBuffLen, const char* 
   if (strstr(fileName, extension) != NULL) {
     // required file type selected
     hasExtension = true;
-    noEntries = true; 
-    strcpy(jsonBuff, "{}");     
+    noEntries = true;
+    strcpy(jsonBuff, "{}");
   } else {
     // ignore leading '/' if not the only character
-    bool returnDirs = strlen(fileName) > 1 ? (strchr(fileName+1, '/') == NULL ? false : true) : true; 
+    bool returnDirs =
+        strlen(fileName) > 1 ? (strchr(fileName + 1, '/') == NULL ? false : true) : true;
     // open relevant folder to list contents
     File root = fp.open(fileName);
     if (strlen(fileName)) {
-      if (!root) LOG_WRN("Failed to open directory %s", fileName);
-      else if (!root.isDirectory()) LOG_WRN("Not a directory %s", fileName);
+      if (!root)
+        LOG_WRN("Failed to open directory %s", fileName);
+      else if (!root.isDirectory())
+        LOG_WRN("Not a directory %s", fileName);
       LOG_VRB("Retrieving %s in %s", returnDirs ? "folders" : "files", fileName);
     }
-    
+
     // build relevant option list
-    strcpy(jsonBuff, returnDirs ? "{" : "{\"/\":\".. [ Up ]\",");            
+    strcpy(jsonBuff, returnDirs ? "{" : "{\"/\":\".. [ Up ]\",");
     File file = root.openNextFile();
-    if (psramFound()) heap_caps_malloc_extmem_enable(MIN_RAM); // small number to force vector into psram
+    if (psramFound())
+      heap_caps_malloc_extmem_enable(MIN_RAM);  // small number to force vector into psram
     while (file) {
-      if (returnDirs && file.isDirectory() && strstr(DATA_DIR, file.name()) == NULL) {  
+      if (returnDirs && file.isDirectory() && strstr(DATA_DIR, file.name()) == NULL) {
         // build folder list, ignore data folder
         sprintf(partJson, "\"%s\":\"%s\",", file.path(), file.name());
         fileVec.push_back(std::string(partJson));
@@ -255,19 +293,25 @@ bool listDir(const char* fname, char* jsonBuff, size_t jsonBuffLen, const char* 
     }
     if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
   }
-  
-  if (noEntries && !hasExtension) sprintf(jsonBuff, "{\"/\":\"List folders\",\"%s\":\"Go to current (today)\",\"%s\":\"Go to previous (yesterday)\"}", currentDir, previousDir);
+
+  if (noEntries && !hasExtension)
+    sprintf(jsonBuff,
+            "{\"/\":\"List folders\",\"%s\":\"Go to current (today)\",\"%s\":\"Go to previous "
+            "(yesterday)\"}",
+            currentDir, previousDir);
   else {
     // build json string content
     sort(fileVec.begin(), fileVec.end(), std::greater<std::string>());
     for (auto fileInfo : fileVec) {
-      if (strlen(jsonBuff) + strlen(fileInfo.c_str()) < jsonBuffLen) strcat(jsonBuff, fileInfo.c_str());
+      if (strlen(jsonBuff) + strlen(fileInfo.c_str()) < jsonBuffLen)
+        strcat(jsonBuff, fileInfo.c_str());
       else {
-        LOG_WRN("Too many folders/files to list %u+%u in %u bytes", strlen(jsonBuff), strlen(partJson), jsonBuffLen);
+        LOG_WRN("Too many folders/files to list %u+%u in %u bytes", strlen(jsonBuff),
+                strlen(partJson), jsonBuffLen);
         break;
       }
     }
-    jsonBuff[strlen(jsonBuff)-1] = '}'; // lose trailing comma 
+    jsonBuff[strlen(jsonBuff) - 1] = '}';  // lose trailing comma
   }
   fileVec.clear();
   return hasExtension;
@@ -282,49 +326,61 @@ static void deleteOthers(const char* baseFile) {
   if (STORAGE.remove(otherDeleteName)) LOG_INF("File %s deleted", otherDeleteName);
   changeExtension(otherDeleteName, SRT_EXT);
   if (STORAGE.remove(otherDeleteName)) LOG_INF("File %s deleted", otherDeleteName);
-#endif  
+#endif
 }
 
 void deleteFolderOrFile(const char* deleteThis) {
   // delete supplied file or folder, unless it is a reserved folder
   char fileName[FILE_NAME_LEN];
   setFolderName(deleteThis, fileName);
-  File df = fp.open(fileName);
+  File df = fp.open(fileName);  // try to open as folder
   if (!df) {
     LOG_WRN("Failed to open %s", fileName);
     return;
   }
-  if (df.isDirectory() && (strstr(fileName, "System") != NULL 
-      || strstr("/", fileName) != NULL)) {
-    df.close();   
+  if (df.isDirectory() && (strstr(fileName, "System") != NULL || strstr("/", fileName) != NULL)) {
+    df.close();
     LOG_WRN("Deletion of %s not permitted", fileName);
-    delay(1000); // reduce thrashing on same error
+    delay(1000);  // reduce thrashing on same error
     return;
-  }  
+  }
   LOG_INF("Deleting : %s", fileName);
   // Empty named folder first
   if (df.isDirectory() || ((!strcmp(fsType, "SPIFFS")) && strstr("/", fileName) != NULL)) {
+    // close and reopen as directory to see the internal files
+    df.close();
+    sprintf(fileName, "%s/", fileName);
+    File df = fp.open(fileName);  // try to open as folder
+    if (!df) {
+      LOG_WRN("Failed to open %s", fileName);
+      return;
+    }
     LOG_INF("Folder %s contents", fileName);
-    File file = df.openNextFile();
-    while (file) {
+    File fileToDelete = df.openNextFile();
+    while (fileToDelete) {
       char filepath[FILE_NAME_LEN];
-      strcpy(filepath, file.path()); 
-      if (file.isDirectory()) LOG_INF("  DIR : %s", filepath);
+      strcpy(filepath, fileToDelete.path());
+      if (fileToDelete.isDirectory())
+        LOG_INF("  DIR : %s", filepath);
       else {
-        size_t fSize = file.size();
-        file.close();
-        LOG_INF("  FILE : %s Size : %s %sdeleted", filepath, fmtSize(fSize), STORAGE.remove(filepath) ? "" : "not ");
+        size_t fSize = fileToDelete.size();
+        fileToDelete.close();
+        LOG_INF("  FILE : %s Size : %s %sdeleted", filepath, fmtSize(fSize),
+                STORAGE.remove(filepath) ? "" : "not ");
         deleteOthers(filepath);
       }
-      file = df.openNextFile();
+      fileToDelete = df.openNextFile();
     }
     // Remove the folder
-    if (df.isDirectory()) LOG_ALT("Folder %s %sdeleted", fileName, STORAGE.rmdir(fileName) ? "" : "not ");
-    else df.close();
+    if (df.isDirectory())
+      LOG_ALT("Folder %s %sdeleted", fileName, STORAGE.rmdir(fileName) ? "" : "not ");
+    else
+      df.close();
   } else {
     // delete individual file
     df.close();
-    LOG_ALT("File %s %sdeleted", deleteThis, STORAGE.remove(deleteThis) ? "" : "not ");  //Remove the file
+    LOG_ALT("File %s %sdeleted", deleteThis,
+            STORAGE.remove(deleteThis) ? "" : "not ");  // Remove the file
     deleteOthers(deleteThis);
   }
 }
@@ -333,20 +389,23 @@ void deleteFolderOrFile(const char* deleteThis) {
 
 #define BLOCKSIZE 512
 
-static esp_err_t writeHeader(File& inFile, httpd_req_t* req) {  
-  char tarHeader[BLOCKSIZE] = {0}; // 512 bytes tar header
-  strncpy(tarHeader, inFile.name(), 99); // name of file
-  sprintf(tarHeader + 100, "0000666"); // file permissions stored as ascii octal number
-  sprintf(tarHeader + 124, "%011o", inFile.size()); // length of file in bytes as 6 digit ascii octal number
-  memcpy(tarHeader + 148, "        ", 8); // init as 8 spaces to calc checksum
-  tarHeader[156] = '0'; // type of entry - 0 for ordinary file
-  strcpy(tarHeader + 257, "ustar"); // magic
-  memcpy(tarHeader + 263, "00", 2); // version as two 0 digits
+static esp_err_t writeHeader(File& inFile, httpd_req_t* req) {
+  char tarHeader[BLOCKSIZE] = {0};        // 512 bytes tar header
+  strncpy(tarHeader, inFile.name(), 99);  // name of file
+  sprintf(tarHeader + 100, "0000666");    // file permissions stored as ascii octal number
+  sprintf(tarHeader + 124, "%011o",
+          inFile.size());                  // length of file in bytes as 6 digit ascii octal number
+  memcpy(tarHeader + 148, "        ", 8);  // init as 8 spaces to calc checksum
+  tarHeader[156] = '0';                    // type of entry - 0 for ordinary file
+  strcpy(tarHeader + 257, "ustar");        // magic
+  memcpy(tarHeader + 263, "00", 2);        // version as two 0 digits
 
   // Calculate and set the checksum
   uint32_t checksum = 0;
   for (const auto& ch : tarHeader) checksum += ch;
-  sprintf(tarHeader + 148, "%06lo", checksum); // six digit octal number with leading zeroes followed by a NUL and then a space.
+  sprintf(
+      tarHeader + 148, "%06lo",
+      checksum);  // six digit octal number with leading zeroes followed by a NUL and then a space.
   return httpd_resp_send_chunk(req, tarHeader, BLOCKSIZE);
 }
 
@@ -362,7 +421,7 @@ esp_err_t downloadFile(File& df, httpd_req_t* req) {
   strcpy(fsSavePath, inFileName);
 #ifdef ISCAM
   changeExtension(fsSavePath, CSV_EXT);
-  
+
   // check if ancillary files present
   needZip = STORAGE.exists(fsSavePath);
   const char* extensions[3] = {AVI_EXT, CSV_EXT, SRT_EXT};
@@ -379,10 +438,10 @@ esp_err_t downloadFile(File& df, httpd_req_t* req) {
         inFile.close();
       }
     }
-    downloadSize += BLOCKSIZE * 2; // end of tarball marker
-    changeExtension(downloadName, "zip"); 
-  } 
-#endif 
+    downloadSize += BLOCKSIZE * 2;  // end of tarball marker
+    changeExtension(downloadName, "zip");
+  }
+#endif
 
   // create http header
   LOG_INF("Download file: %s, size: %s", downloadName, fmtSize(downloadSize));
@@ -422,7 +481,8 @@ esp_err_t downloadFile(File& df, httpd_req_t* req) {
     res = httpd_resp_send_chunk(req, zeroBlock, BLOCKSIZE);
     res = httpd_resp_sendstr_chunk(req, NULL);
 #endif
-  } else res = sendChunks(df, req); // send AVI
+  } else
+    res = sendChunks(df, req);  // send AVI
   return res;
 }
 
@@ -443,12 +503,14 @@ bool formatSDcard() {
     return false;
   }
 
-  size_t alloc_unit_size = esp_vfs_fat_get_allocation_unit_size(
-      sector_size_default, allocation_unit_size);
+  size_t alloc_unit_size =
+      esp_vfs_fat_get_allocation_unit_size(sector_size_default, allocation_unit_size);
   const MKFS_PARM opt = {(BYTE)FM_ANY, 0, 0, 0, alloc_unit_size};
   FRESULT res = f_mkfs(drv, &opt, workbuf, workbuf_size);
   ff_memfree(workbuf);
-  if (res != FR_OK) LOG_ERR("SD card format failed");
-  else LOG_INF("SD card formatted with alloc unit size %d", alloc_unit_size);
+  if (res != FR_OK)
+    LOG_ERR("SD card format failed");
+  else
+    LOG_INF("SD card formatted with alloc unit size %d", alloc_unit_size);
   return res != FR_OK ? false : true;
 }

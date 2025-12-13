@@ -77,7 +77,6 @@ static void startAccelerometerTask() {
 #define INT_PIN_1 12
 #define INT_PIN_2 13
 static int attachInterrupts(char interruptMode) {
-  LOG_INF("       Attaching interrupts and its tasks");
   if (interruptMode == INTERRUPT_1 || interruptMode == INTERRUPT_1_2) {
     LOG_INF("       Attaching interrupt 1");
     pinMode(INT_PIN_1, INPUT_PULLUP);
@@ -92,9 +91,7 @@ static int attachInterrupts(char interruptMode) {
     int pin = digitalPinToInterrupt(INT_PIN_2);
     LOG_INF("       Attached interrupt on pin %d", pin);
     attachInterrupt(pin, keyISR2, FALLING);
-    LOG_INF("       create  task 2");
   }
-  LOG_INF("       END create  task");
   return 1;
 }
 
@@ -138,6 +135,6 @@ void accSetCurrentAviDir(String _currentDir) {
 
 void saveCurrentDir() {
   LOG_INF("Crash Detect Saving current %s", currentDir);
-  STORAGE.rename(currentDir, "/crashDetect");
+  STORAGE.rename(currentDir, CRASH_DIR);
 }
 #endif
