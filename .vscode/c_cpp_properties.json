@@ -5,7 +5,8 @@
       "includePath": [
         "${workspaceFolder}/**",
         "/home/civico129/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino/**",
-        "/home/civico129/.arduino15/packages/esp32/hardware/esp32/3.3.0/libraries/**",
+        "/home/civico129/.arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/**",
+        "/home/civico129/.arduino15/packages/esp32/hardware/esp32/3.3.3/cores/esp32/**",
         "/home/civico129/.arduino15/packages/esp32/tools/esp32-arduino-libs/**",
         "/home/civico129/.arduino15/packages/esp32/tools/esp32-arduino-libs/idf-release_v5.5-b66b5448-v1/esp32/include/**"
       ],
