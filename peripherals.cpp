@@ -6,13 +6,13 @@
 // - DS18B20 temperature sensor
 // - battery voltage measurement
 // - lamp LED driver (PWM or WS2812 / SK6812)
-// - 3 pin joystick 
+// - 3 pin joystick
 // - MY9221 based LED Bar, eg 10 segment Grove LED Bar
 // - 5 wire 28BYJ-48 Unipolar Stepper Motor with ULN2003 Motor Driver
 // - 4 wire Bipolar Stepper Motor with MX1508 H-Bridge Motor Driver
 //
 // Peripherals can be hosted directly on the client ESP, or on
-// a separate IO Extender ESP if the client ESP has limited free 
+// a separate IO Extender ESP if the client ESP has limited free
 // pins, eg ESP-Cam module
 // External peripherals should have low data rate and not require fast response,
 // so interrupt driven input pins should be monitored internally by the client.
@@ -23,70 +23,69 @@
 // s60sc 2022 - 2025
 //
 
-#include "appGlobals.h"
-#include "appDefaultConfig.h"
 #include "accelerometer.h"
+#include "appDefaultConfig.h"
+#include "appGlobals.h"
 
 #if INCLUDE_PERIPH
 #include "driver/ledc.h"
 
 // peripherals used
-bool pirUse; // true to use PIR for motion detection
-bool accUse; // true to use accelerometer for motion detection
-bool ledBarUse; // true to use led bar
-uint8_t lampLevel; // brightness of on board lamp led 
-bool lampAuto = false; // if true in conjunction with pirUse and accUse, switch on lamp when PIR or accelerometer activated at night
-bool lampNight; // if true, lamp comes on at night (not used)
-int lampType; // how lamp is used
-bool voltUse; // true to report on ADC pin eg for for battery
-bool stickUse; // true to use joystick
-bool buzzerUse; // true to use buzzer
-bool stepperUse; // true to use stepper motor
-bool SVactive; // true to use servos
+bool pirUse;            // true to use PIR for motion detection
+bool ledBarUse;         // true to use led bar
+uint8_t lampLevel;      // brightness of on board lamp led
+bool lampAuto = false;  // if true in conjunction with pirUse, switch on lamp when PIR or
+                        // accelerometer activated at night
+bool lampNight;         // if true, lamp comes on at night (not used)
+int lampType;           // how lamp is used
+bool voltUse;           // true to report on ADC pin eg for for battery
+bool stickUse;          // true to use joystick
+bool buzzerUse;         // true to use buzzer
+bool stepperUse;        // true to use stepper motor
+bool SVactive;          // true to use servos
 TaskHandle_t heartBeatHandle = NULL;
 bool RCactive = false;
 
 // Pins used by peripherals
 
-// sensors 
-int pirPin; // if pirUse is true
+// sensors
+int pirPin;  // if pirUse is true
 int lampPin;
-int buzzerPin; // if buzzerUse is true
+int buzzerPin;  // if buzzerUse is true
 
 
 // accelerometer (ADXL345) pins
 #define MAX_INT_SELECTION_STR 10
-int accCS=0;
-int accINT=0;
+int accINT = 0;
 
-// Camera servos 
+// Camera servos
 int servoPanPin;
 int servoTiltPin;
 
-// ambient / module temperature reading 
-int ds18b20Pin; // if INCLUDE_DS18B20 true
+// ambient / module temperature reading
+int ds18b20Pin;  // if INCLUDE_DS18B20 true
 
-// batt monitoring 
+// batt monitoring
 // only pin 33 can be used on ESP32-Cam module as it is the only available analog pin
-int voltPin; 
+int voltPin;
 
 // additional peripheral configuration
 // configure for specific servo model, eg for SG90
-int servoMinAngle; // degrees
+int servoMinAngle;  // degrees
 int servoMaxAngle;
-int servoMinPulseWidth; // usecs
+int servoMinPulseWidth;  // usecs
 int servoMaxPulseWidth;
-int servoDelay; // control rate of change of servo angle using delay
-int servoCenter = 90; // angle in degrees where servo is centered 
+int servoDelay;        // control rate of change of servo angle using delay
+int servoCenter = 90;  // angle in degrees where servo is centered
 
 // configure battery monitor
-int voltDivider; // set battVoltageDivider value to be divisor of input voltage from resistor divider
-                 // eg: 100k / 100k would be divisor value 2
-float voltLow; // voltage level at which to send out email alert
-int voltInterval; // interval in minutes to check battery voltage
+int voltDivider;   // set battVoltageDivider value to be divisor of input voltage from resistor
+                   // divider eg: 100k / 100k would be divisor value 2
+float voltLow;     // voltage level at which to send out email alert
+int voltInterval;  // interval in minutes to check battery voltage
 
 // buzzer duration
-int buzzerDuration; // time buzzer sounds in seconds 
+int buzzerDuration;  // time buzzer sounds in seconds
 
 // RC pins and control
 int servoSteerPin;
@@ -98,10 +97,10 @@ int minDutyCycle;
 int maxTurnSpeed;
 bool allowReverse;
 bool autoControl;
-int waitTime; 
-int stickzPushPin; // digital pin connected to switch output
-int stickXpin; // analog pin connected to X output
-int stickYpin; // analog pin connected to Y output
+int waitTime;
+int stickzPushPin;  // digital pin connected to switch output
+int stickXpin;      // analog pin connected to X output
+int stickYpin;      // analog pin connected to Y output
 int relayPin;
 bool relayMode;
 
@@ -110,7 +109,7 @@ int ledBarClock;
 int ledBarData;
 
 // Stepper motor driver pins
-#define stepperPins 4 
+#define stepperPins 4
 uint8_t stepINpins[stepperPins];
 
 static void doStep();
@@ -121,8 +120,8 @@ void setLamp(uint8_t lampVal);
 // individual pin sensor / controller functions
 
 bool getPIRval() {
-  // get PIR or radar sensor status 
-  return digitalRead(pirPin); 
+  // get PIR or radar sensor status
+  return digitalRead(pirPin);
 }
 
 void buzzerAlert(bool buzzerOn) {
@@ -131,8 +130,9 @@ void buzzerAlert(bool buzzerOn) {
     if (buzzerOn) {
       // turn buzzer on
       pinMode(buzzerPin, OUTPUT);
-      digitalWrite(buzzerPin, HIGH); 
-    } else digitalWrite(buzzerPin, LOW); // turn buzzer off
+      digitalWrite(buzzerPin, HIGH);
+    } else
+      digitalWrite(buzzerPin, LOW);  // turn buzzer off
   }
 }
 
@@ -144,14 +144,14 @@ void buzzerAlert(bool buzzerOn) {
 // - red: 5V
 // - brown: GND
 //
-#define PWM_FREQ 50 // hertz
-#define DUTY_BIT_DEPTH 12 // max for ESP32-C3 is 14
+#define PWM_FREQ 50        // hertz
+#define DUTY_BIT_DEPTH 12  // max for ESP32-C3 is 14
 
 TaskHandle_t servoHandle = NULL;
 static int newTiltVal, newPanVal, newSteerVal;
-static int oldPanVal, oldTiltVal, oldSteerVal; 
+static int oldPanVal, oldTiltVal, oldSteerVal;
 
-static int dutyCycle (int angle) {
+static int dutyCycle(int angle) {
   // calculate duty cycle for given angle
   angle = constrain(angle, servoMinAngle, servoMaxAngle);
   int pulseWidth = map(angle, servoMinAngle, servoMaxAngle, servoMinPulseWidth, servoMaxPulseWidth);
@@ -163,7 +163,7 @@ static int changeAngle(uint8_t servoPin, int newVal, int oldVal, bool useDelay =
   int incr = newVal - oldVal > 0 ? 1 : -1;
   for (int angle = oldVal; angle != newVal + incr; angle += incr) {
     ledcWrite(servoPin, dutyCycle(angle));
-    if (useDelay) delay(servoDelay); // set rate of change
+    if (useDelay) delay(servoDelay);  // set rate of change
   }
   return newVal;
 }
@@ -172,7 +172,8 @@ static void servoTask(void* pvParameters) {
   // update servo position from user input
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    if (newSteerVal != oldSteerVal) oldSteerVal = changeAngle(servoSteerPin, newSteerVal, oldSteerVal, false);
+    if (newSteerVal != oldSteerVal)
+      oldSteerVal = changeAngle(servoSteerPin, newSteerVal, oldSteerVal, false);
     if (newPanVal != oldPanVal) oldPanVal = changeAngle(servoPanPin, newPanVal, oldPanVal);
     if (newTiltVal != oldTiltVal) oldTiltVal = changeAngle(servoTiltPin, newTiltVal, oldTiltVal);
   }
@@ -198,16 +199,20 @@ void setSteering(int steerVal) {
 
 static void prepServos() {
   if (SVactive) {
-    if (servoPanPin) ledcAttach(servoPanPin, PWM_FREQ, DUTY_BIT_DEPTH); 
-    else LOG_WRN("No servo pan pin defined");
-    if (servoTiltPin) ledcAttach(servoTiltPin, PWM_FREQ, DUTY_BIT_DEPTH);
-    else LOG_WRN("No servo tilt pin defined");
+    if (servoPanPin)
+      ledcAttach(servoPanPin, PWM_FREQ, DUTY_BIT_DEPTH);
+    else
+      LOG_WRN("No servo pan pin defined");
+    if (servoTiltPin)
+      ledcAttach(servoTiltPin, PWM_FREQ, DUTY_BIT_DEPTH);
+    else
+      LOG_WRN("No servo tilt pin defined");
   }
   if (RCactive && servoSteerPin) ledcAttach(servoSteerPin, PWM_FREQ, DUTY_BIT_DEPTH);
   oldPanVal = oldTiltVal = oldSteerVal = servoCenter + 1;
 
   if (SVactive || (RCactive && servoSteerPin)) {
-    xTaskCreate(&servoTask, "servoTask", SERVO_STACK_SIZE, NULL, SERVO_PRI, &servoHandle); 
+    xTaskCreate(&servoTask, "servoTask", SERVO_STACK_SIZE, NULL, SERVO_PRI, &servoHandle);
     // initial angle
     if (servoPanPin) setCamPan(servoCenter);
     if (servoTiltPin) setCamTilt(servoCenter);
@@ -227,8 +232,8 @@ static void prepServos() {
 */
 
 #if INCLUDE_DS18B20
-#include <OneWire.h> // https://github.com/PaulStoffregen/OneWire
-#include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
+#include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
+#include <OneWire.h>            // https://github.com/PaulStoffregen/OneWire
 #endif
 
 // configuration
@@ -249,14 +254,16 @@ static void DS18B20task(void* pvParameters) {
     if (deviceAddress[0] == 0x28) {
       uint8_t tryCnt = 10;
       while (tryCnt) {
-        sensors.requestTemperatures(); 
+        sensors.requestTemperatures();
         dsTemp = sensors.getTempCByIndex(0);
         // ignore occasional duff readings
-        if (dsTemp > NULL_TEMP) tryCnt = 10;
-        else tryCnt--;
+        if (dsTemp > NULL_TEMP)
+          tryCnt = 10;
+        else
+          tryCnt--;
         delay(1000);
-      }   
-    } 
+      }
+    }
     // retry setting up ds18b20
     delay(10000);
   }
@@ -266,10 +273,11 @@ static void DS18B20task(void* pvParameters) {
 void prepTemperature() {
 #if INCLUDE_DS18B20
   if (ds18b20Pin) {
-    xTaskCreate(&DS18B20task, "DS18B20task", DS18B20_STACK_SIZE, NULL, DS18B20_PRI, &DS18B20handle); 
+    xTaskCreate(&DS18B20task, "DS18B20task", DS18B20_STACK_SIZE, NULL, DS18B20_PRI, &DS18B20handle);
     haveDS18B20 = true;
     LOG_INF("Using DS18B20 sensor");
-  } else LOG_WRN("No DS18B20 pin defined, using chip sensor if present");
+  } else
+    LOG_WRN("No DS18B20 pin defined, using chip sensor if present");
 #endif
 }
 
@@ -280,22 +288,22 @@ float readTemperature(bool isCelsius, bool onlyDS18) {
   return (dsTemp > NULL_TEMP) ? (isCelsius ? dsTemp : (dsTemp * 1.8) + 32.0) : dsTemp;
 }
 
-float getNTCcelsius (uint16_t resistance, float oldTemp) {
+float getNTCcelsius(uint16_t resistance, float oldTemp) {
   // convert NTC thermistor resistance reading to celsius
   double Temp = log(resistance);
-  Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp )) * Temp);
-  Temp = (Temp == 0) ? oldTemp : Temp - 273.15; // if 0 then didnt get a reading
-  return (float) Temp;
+  Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp)) * Temp);
+  Temp = (Temp == 0) ? oldTemp : Temp - 273.15;  // if 0 then didnt get a reading
+  return (float)Temp;
 }
 
 /************ battery monitoring ************/
 
 // Read voltage from battery connected to ADC pin
 // input battery voltage may need to be reduced by voltage divider resistors to keep it below 3V3.
-static float currentVoltage = -1.0; // no monitoring
+static float currentVoltage = -1.0;  // no monitoring
 TaskHandle_t battHandle = NULL;
 
-float readVoltage()  {
+float readVoltage() {
   return currentVoltage;
 }
 
@@ -307,23 +315,24 @@ static void battTask(void* parameter) {
 
     static bool sentExtAlert = false;
     if (currentVoltage < voltLow && !sentExtAlert) {
-      sentExtAlert = true; // only sent once per esp32 session
+      sentExtAlert = true;  // only sent once per esp32 session
       char battMsg[20];
       sprintf(battMsg, "Voltage is %0.2fV", currentVoltage);
       externalAlert("Low battery", battMsg);
     }
-    delay(voltInterval * 60 * 1000); // mins
+    delay(voltInterval * 60 * 1000);  // mins
   }
   vTaskDelete(NULL);
 }
 
 static void setupBatt() {
   if (voltUse) {
-  	if (voltPin) {
+    if (voltPin) {
       xTaskCreate(&battTask, "battTask", BATT_STACK_SIZE, NULL, BATT_PRI, &battHandle);
       LOG_INF("Monitor batt voltage");
       debugMemory("setupBatt");
-    } else LOG_WRN("No voltage pin defined");
+    } else
+      LOG_WRN("No voltage pin defined");
   }
 }
 
@@ -337,7 +346,8 @@ static rmt_data_t ledData[RGB_BITS];
 
 static void setupLamp() {
   // setup lamp LED according to board type
-  // assumes led wired as active high (ESP32 lamp led on pin 4 is active high, signal led on pin 33 is active low)
+  // assumes led wired as active high (ESP32 lamp led on pin 4 is active high, signal led on pin 33
+  // is active low)
   lampInit = false;
 #if defined(LED_GPIO_NUM)
   if (lampPin <= 0) {
@@ -352,7 +362,7 @@ static void setupLamp() {
     lampInit = true;
 #if defined(USE_WS2812)
     // WS2812 RGB high intensity led
-    if (rmtInit(lampPin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000)) 
+    if (rmtInit(lampPin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000))
       LOG_INF("Setup WS2812 Lamp Led on pin %d", lampPin);
     else {
       LOG_WRN("Failed to setup WS2812 on pin %u", lampPin);
@@ -360,7 +370,7 @@ static void setupLamp() {
     }
 #else
     // assume PWM LED
-    ledcAttach(lampPin, 5000, DUTY_BIT_DEPTH); // freq, resolution
+    ledcAttach(lampPin, 5000, DUTY_BIT_DEPTH);  // freq, resolution
     setLamp(0);
     LOG_INF("Setup PWM Lamp Led on pin %d", lampPin);
 #endif
@@ -375,14 +385,14 @@ void setLamp(uint8_t lampVal) {
     if (lampInit) {
 #if defined(USE_WS2812)
       // WS2812 LED - set white color and apply lampVal (0 = off, 15 = max)
-      uint8_t RGB[3]; // each color is 8 bits
+      uint8_t RGB[3];  // each color is 8 bits
       lampVal = lampVal == 15 ? 255 : lampVal * 16;
       for (uint8_t i = 0; i < 3; i++) {
         RGB[i] = lampVal;
         // apply WS2812 bit encoding pulse timing per bit
-        for (uint8_t j = 0; j < 8; j++) { 
+        for (uint8_t j = 0; j < 8; j++) {
           int bit = (i * 8) + j;
-          if ((RGB[i] << j) & 0x80) { // get left most bit first
+          if ((RGB[i] << j) & 0x80) {  // get left most bit first
             // bit = 1
             ledData[bit].level0 = 1;
             ledData[bit].duration0 = 8;
@@ -409,10 +419,10 @@ void setLamp(uint8_t lampVal) {
 }
 
 void twinkleLed(uint8_t ledPin, uint16_t interval, uint8_t blinks) {
-  // twinkle led, for given number of blinks, 
+  // twinkle led, for given number of blinks,
   //  with given interval in ms between blinks
   bool ledState = true;
-  for (int i=0; i<blinks*2; i++) {
+  for (int i = 0; i < blinks * 2; i++) {
     digitalWrite(ledPin, ledState);
     delay(interval);
     ledState = !ledState;
@@ -420,13 +430,14 @@ void twinkleLed(uint8_t ledPin, uint16_t interval, uint8_t blinks) {
 }
 
 void setLightsRC(bool lightsOn) {
-  // on / off RC light 
+  // on / off RC light
   if (lightsRCpin > 0) digitalWrite(lightsRCpin, lightsOn);
 }
 
 static void prepPIR() {
   if (pirUse) {
-    if (pirPin) pinMode(pirPin, INPUT_PULLDOWN); // pulled high for active
+    if (pirPin)
+      pinMode(pirPin, INPUT_PULLDOWN);  // pulled high for active
     else {
       pirUse = false;
       LOG_WRN("No PIR pin defined");
@@ -442,9 +453,9 @@ static void prepPIR() {
 // Requires 2 analog pins and 1 digital pin. Ideally supply voltage should be 3.3V
 // X axis is longer edge of board
 
-static const int sRate = 1; // samples per analog reading
-static int xOffset = 0; // x zero offset
-static int yOffset = 0; // y zero offset
+static const int sRate = 1;  // samples per analog reading
+static int xOffset = 0;      // x zero offset
+static int yOffset = 0;      // y zero offset
 static bool lightsChanged = false;
 TaskHandle_t stickHandle = NULL;
 
@@ -457,7 +468,7 @@ static void IRAM_ATTR stickISR() {
   // interrupt at timer rate
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   if (stickHandle) {
-    vTaskNotifyGiveFromISR(stickHandle, &xHigherPriorityTaskWoken); 
+    vTaskNotifyGiveFromISR(stickHandle, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE) portYIELD_FROM_ISR();
   }
 }
@@ -467,34 +478,37 @@ void setStickTimer(bool restartTimer, uint32_t interval) {
   static hw_timer_t* stickTimer = NULL;
   // stop timer if running
   if (stickTimer) {
-    timerDetachInterrupt(stickTimer); 
+    timerDetachInterrupt(stickTimer);
     timerEnd(stickTimer);
     stickTimer = NULL;
   }
   if (restartTimer) {
     // (re)start timer interrupt per required interval
-    stickTimer = timerBegin(OneMHz); // 1 MHz
+    stickTimer = timerBegin(OneMHz);  // 1 MHz
     timerAttachInterrupt(stickTimer, &stickISR);
-    timerAlarm(stickTimer, interval, true, 0); // in usecs
+    timerAlarm(stickTimer, interval, true, 0);  // in usecs
   }
 }
 
-static void stickTask (void *pvParameter) {
+static void stickTask(void* pvParameter) {
   static bool lightsStatus = false;
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     if (stickUse) {
       // get joystick position, adjusted for zero offset
       int xPos = smoothAnalog(stickXpin, sRate);
-      int steerAngle = (xPos > CENTER_ADC + xOffset) ? map(xPos, CENTER_ADC + xOffset, MAX_ADC, servoCenter, servoCenter + maxSteerAngle)
-        : map(xPos, 0, CENTER_ADC + xOffset, servoCenter - maxSteerAngle, servoCenter); 
+      int steerAngle =
+          (xPos > CENTER_ADC + xOffset)
+              ? map(xPos, CENTER_ADC + xOffset, MAX_ADC, servoCenter, servoCenter + maxSteerAngle)
+              : map(xPos, 0, CENTER_ADC + xOffset, servoCenter - maxSteerAngle, servoCenter);
       setSteering(steerAngle);
-      
+
       int yPos = smoothAnalog(stickYpin, sRate);
       // reverse orientation of Y axis so up is forward
-      int motorCycle = (yPos > CENTER_ADC + yOffset) ? map(yPos, CENTER_ADC + yOffset, MAX_ADC, 0, 0 - maxDutyCycle)
-        : map(yPos, 0, CENTER_ADC + yOffset, maxDutyCycle, 0); 
-      if (abs(motorCycle) < minDutyCycle) motorCycle = 0; // deadzone
+      int motorCycle = (yPos > CENTER_ADC + yOffset)
+                           ? map(yPos, CENTER_ADC + yOffset, MAX_ADC, 0, 0 - maxDutyCycle)
+                           : map(yPos, 0, CENTER_ADC + yOffset, maxDutyCycle, 0);
+      if (abs(motorCycle) < minDutyCycle) motorCycle = 0;  // deadzone
 #if INCLUDE_MCPWM
       motorSpeed(motorCycle);
 #endif
@@ -504,7 +518,7 @@ static void stickTask (void *pvParameter) {
     }
     if (stepperUse) doStep();
   }
-} 
+}
 
 static void prepJoystick() {
   if (stickUse) {
@@ -515,9 +529,10 @@ static void prepJoystick() {
       LOG_VRB("X-offset: %d, Y-offset: %d", xOffset, yOffset);
       if (stickzPushPin > 0) {
         pinMode(stickzPushPin, INPUT_PULLUP);
-        attachInterrupt(digitalPinToInterrupt(stickzPushPin), buttonISR, FALLING); 
+        attachInterrupt(digitalPinToInterrupt(stickzPushPin), buttonISR, FALLING);
       }
-      if (stickHandle == NULL) xTaskCreate(&stickTask, "stickTask", STICK_STACK_SIZE , NULL, STICK_PRI, &stickHandle);
+      if (stickHandle == NULL)
+        xTaskCreate(&stickTask, "stickTask", STICK_STACK_SIZE, NULL, STICK_PRI, &stickHandle);
       setStickTimer(true, waitTime * 1000);
       LOG_INF("Joystick available");
     } else {
@@ -535,23 +550,24 @@ static void prepJoystick() {
 // Uses stickTask & stickTimer
 
 #define stepPhases 4
-#define modelTypes 2 // must equal enum stepperModel entries in appGlobals.h
+#define modelTypes 2  // must equal enum stepperModel entries in appGlobals.h
 static bool clockwise = false;
-static const uint16_t stepsPerRevolution[modelTypes] = {32 * 64, 20}; // number of steps in geared 28BYJ-48 unipolar, 8mm bipolar
-static uint32_t stepsToDo = 0; // total steps requested
+static const uint16_t stepsPerRevolution[modelTypes] = {
+    32 * 64, 20};               // number of steps in geared 28BYJ-48 unipolar, 8mm bipolar
+static uint32_t stepsToDo = 0;  // total steps requested
 static uint8_t modelIndex = 0;
 static uint8_t stepPhase = 0;
 static const uint8_t pinSequence[stepPhases * modelTypes][stepperPins] = {
-  // 28BYJ-48 unipolar full step phases
-  {1, 1, 0, 0}, 
-  {0, 1, 1, 0}, 
-  {0, 0, 1, 1}, 
-  {1, 0, 0, 1},
-  // 8mm bipolar half step phases
-  {1, 0, 1, 0}, 
-  {0, 1, 1, 0}, 
-  {0, 1, 0, 1}, 
-  {1, 0, 0, 1}, 
+    // 28BYJ-48 unipolar full step phases
+    {1, 1, 0, 0},
+    {0, 1, 1, 0},
+    {0, 0, 1, 1},
+    {1, 0, 0, 1},
+    // 8mm bipolar half step phases
+    {1, 0, 1, 0},
+    {0, 1, 1, 0},
+    {0, 1, 0, 1},
+    {1, 0, 0, 1},
 };
 
 
@@ -572,9 +588,11 @@ static void prepStepper() {
         digitalWrite(stepINpins[i], LOW);
       }
       // stickTask provides speed control timer
-      if (stickHandle == NULL) xTaskCreate(&stickTask, "stickTask", STICK_STACK_SIZE , NULL, STICK_PRI, &stickHandle);   
-      LOG_INF("Stepper motor on pins: %d, %d, %d, %d", stepINpins[0], stepINpins[1], stepINpins[2], stepINpins[3]);
-      // NOTE: very first step after motor power may not occur or be reversed 
+      if (stickHandle == NULL)
+        xTaskCreate(&stickTask, "stickTask", STICK_STACK_SIZE, NULL, STICK_PRI, &stickHandle);
+      LOG_INF("Stepper motor on pins: %d, %d, %d, %d", stepINpins[0], stepINpins[1], stepINpins[2],
+              stepINpins[3]);
+      // NOTE: very first step after motor power may not occur or be reversed
     } else {
       stepperUse = false;
       LOG_WRN("Stepper pins not defined");
@@ -584,7 +602,7 @@ static void prepStepper() {
 
 static void nextPhase(bool changeDir = false) {
   // identify next phase
-  if (changeDir) clockwise = !clockwise; // amend next phase to account for change in direction
+  if (changeDir) clockwise = !clockwise;  // amend next phase to account for change in direction
   if (clockwise) {
     if (stepPhase-- <= 0) stepPhase = stepPhases - 1;
   } else {
@@ -600,26 +618,28 @@ void stepperRun(float RPM, float revFraction, bool _clockwise, stepperModel this
   modelIndex = stepPhases * thisStepper;
   if (clockwise != _clockwise) {
     // change of direction, modify next phase to be in reversed sequence
-    nextPhase(true);  
+    nextPhase(true);
     nextPhase();
   }
-  uint32_t stepDelay = 60 * USECS / RPM; // duration of 1 rev in microsecs
-  stepDelay /= stepsPerRevolution[thisStepper]; // duration per step
+  uint32_t stepDelay = 60 * USECS / RPM;         // duration of 1 rev in microsecs
+  stepDelay /= stepsPerRevolution[thisStepper];  // duration per step
 
   // start stickTimer that calls task to do sequence of steps
-  setStickTimer(false, 0); // stop previous timer
+  setStickTimer(false, 0);  // stop previous timer
   setStickTimer(true, stepDelay);
 }
 
 static void doStep() {
   // called from sticktask to do single step in sequence
   if (stepsToDo--) {
-    for (int i = 0; i < stepperPins; i++) digitalWrite(stepINpins[i], pinSequence[modelIndex + stepPhase][i]);
+    for (int i = 0; i < stepperPins; i++)
+      digitalWrite(stepINpins[i], pinSequence[modelIndex + stepPhase][i]);
     nextPhase();
   } else {
     // step sequence completed
     setStickTimer(false, 0);  // stop task timer
-    for (int i = 0; i < stepperPins; i++) digitalWrite(stepINpins[i], LOW); // stop unnecessary power use
+    for (int i = 0; i < stepperPins; i++)
+      digitalWrite(stepINpins[i], LOW);  // stop unnecessary power use
 #if (INCLUDE_PGRAM && INCLUDE_PERIPH)
     stepperDone();
 #endif
@@ -634,27 +654,27 @@ static void doStep() {
     Red    3V3
     White  DCKI Clock pin
     Yellow D1 Data pin
-    
+
  Can be used as a gauge, eg display sound level
  */
 
-#define MY9221_COUNT 12 // max number of leds addressable by MY9221 LED driver
-#define LEDBAR_COUNT 10 // number of leds in bar display
+#define MY9221_COUNT 12  // max number of leds addressable by MY9221 LED driver
+#define LEDBAR_COUNT 10  // number of leds in bar display
 #define LED_OFF 0x00
 #define LED_FULL 0xFF
 
-static bool reverse = true; // from which end to light leds, true is green -> red on Grove LED Bar
+static bool reverse = true;  // from which end to light leds, true is green -> red on Grove LED Bar
 static uint8_t ledLevel[LEDBAR_COUNT];
 
 static void ledBarLatch() {
   // display uploaded register by triggering internal-latch function
-  digitalWrite(ledBarClock, LOW); 
-  delayMicroseconds(250); // minimum 220us
+  digitalWrite(ledBarClock, LOW);
+  delayMicroseconds(250);  // minimum 220us
   // Internal-latch control cycle
   bool dataVal = false;
   for (uint8_t i = 0; i < 8; i++, dataVal = !dataVal) {
     digitalWrite(ledBarData, dataVal ? HIGH : LOW);
-    delayMicroseconds(1); // > min pulse length 230ns 
+    delayMicroseconds(1);  // > min pulse length 230ns
   }
 }
 
@@ -679,16 +699,16 @@ void ledBrightness(uint8_t whichLed, float brightness) {
 void ledBarUpdate() {
   // update MY9221 208 bit register with required values
   if (ledBarUse) {
-    ledBarSend(0); // initial 16 bit command, as 8 bit greyscale mode + defaults
+    ledBarSend(0);  // initial 16 bit command, as 8 bit greyscale mode + defaults
     // 12 * 16 bits LED greyscale PWM values
-    for (uint8_t i = 0; i < LEDBAR_COUNT; i++) // 10 * 16 bits
+    for (uint8_t i = 0; i < LEDBAR_COUNT; i++)  // 10 * 16 bits
       ledBarSend(reverse ? ledLevel[LEDBAR_COUNT - 1 - i] : ledLevel[i]);
     // fill register for remaining unused channels
     for (uint8_t i = 0; i < MY9221_COUNT - LEDBAR_COUNT; i++) ledBarSend(LED_OFF);
     ledBarLatch();
   }
 }
-       
+
 void ledBarGauge(float level) {
   // set how many leds to be switched on and their brightness
   // as a proportion of level between 0.0 and 1.0
@@ -700,7 +720,7 @@ void ledBarGauge(float level) {
     uint8_t fullLedCnt = (uint8_t)(level * LEDBAR_COUNT);
     for (uint8_t i = 0; i < fullLedCnt; i++) ledLevel[i] = LED_FULL;
     // set brightness for most significant lit led
-    ledBrightness(fullLedCnt, (LEDBAR_COUNT * level) - fullLedCnt); 
+    ledBrightness(fullLedCnt, (LEDBAR_COUNT * level) - fullLedCnt);
     ledBarUpdate();
   }
 }
@@ -713,7 +733,8 @@ static void prepLedBar() {
     ledBarClear();
     ledBarUpdate();
     LOG_INF("Setup %d Led Bar with pins %d, %d", LEDBAR_COUNT, ledBarClock, ledBarData);
-  } else ledBarUse = false;
+  } else
+    ledBarUse = false;
 }
 
 /**********************************************/
@@ -724,12 +745,15 @@ void prepPeripherals() {
   setupBatt();
   setupLamp();
   prepPIR();
-  prepAcc();
   prepTemperature();
-  prepServos();  
+  prepServos();
   prepJoystick();
   prepStepper();
   prepLedBar();
+
+#if INCLUDE_ACCELEROMETER
+  prepAcc();
+#endif
   debugMemory("prepPeripherals");
 }
 
